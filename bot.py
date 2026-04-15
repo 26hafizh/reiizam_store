@@ -11,7 +11,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -715,7 +715,8 @@ async def reply_html(
     logo_path = get_logo_path(category_key) if category_key else None
     if logo_path:
         with logo_path.open('rb') as photo_file:
-            await message.reply_photo(
+            await message.get_bot().send_photo(
+                chat_id=message.chat_id,
                 photo=photo_file,
                 caption=text,
                 reply_markup=reply_markup,
@@ -770,30 +771,18 @@ async def edit_or_reply(
     logo_path = get_logo_path(category_key) if category_key else None
 
     try:
-        if logo_path:
-            if message and message.photo:
-                with logo_path.open('rb') as photo_file:
-                    await query.edit_message_media(
-                        media=InputMediaPhoto(
-                            media=photo_file,
-                            caption=text,
-                            parse_mode=ParseMode.HTML,
-                        ),
-                        reply_markup=reply_markup,
-                    )
-                return
-
-            if message:
-                with logo_path.open('rb') as photo_file:
-                    await message.reply_photo(
-                        photo=photo_file,
-                        caption=text,
-                        reply_markup=reply_markup,
-                        parse_mode=ParseMode.HTML,
-                    )
-                with suppress(Exception):
-                    await message.delete()
-                return
+        if logo_path and message:
+            with logo_path.open('rb') as photo_file:
+                await message.get_bot().send_photo(
+                    chat_id=message.chat_id,
+                    photo=photo_file,
+                    caption=text,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
+                )
+            with suppress(Exception):
+                await message.delete()
+            return
 
         if message and message.photo:
             await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
@@ -810,7 +799,8 @@ async def edit_or_reply(
             if message:
                 if logo_path:
                     with logo_path.open('rb') as photo_file:
-                        await message.reply_photo(
+                        await message.get_bot().send_photo(
+                            chat_id=message.chat_id,
                             photo=photo_file,
                             caption=text,
                             reply_markup=reply_markup,
