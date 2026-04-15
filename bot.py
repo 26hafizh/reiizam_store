@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from contextlib import suppress
 from html import escape
+from pathlib import Path
 from urllib.parse import quote
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -23,18 +25,48 @@ from telegram.ext import (
 # =========================================================
 # KONFIGURASI
 # =========================================================
+def load_local_env() -> None:
+    env_path = Path(".env")
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+load_local_env()
+
+
+def get_int_env(name: str, default: int) -> int:
+    raw_value = (os.getenv(name, str(default)) or str(default)).strip()
+    try:
+        return int(raw_value)
+    except ValueError:
+        logging.getLogger(__name__).warning(
+            "Nilai %s=%r tidak valid. Menggunakan default %s.",
+            name,
+            raw_value,
+            default,
+        )
+        return default
+
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WA_NUMBER = os.getenv("WA_NUMBER", "6285126019233").strip()
 STORE_NAME = os.getenv("STORE_NAME", "reiizam store").strip()
 HEALTHCHECK_PATH = os.getenv("HEALTHCHECK_PATH", "/health").strip() or "/health"
+RESTART_DELAY_SECONDS = max(get_int_env("RESTART_DELAY_SECONDS", 5), 1)
 
 if not HEALTHCHECK_PATH.startswith("/"):
     HEALTHCHECK_PATH = f"/{HEALTHCHECK_PATH}"
 
-try:
-    PORT = int((os.getenv("PORT", "0") or "0").strip())
-except ValueError:
-    PORT = 0
+PORT = get_int_env("PORT", 0)
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -757,6 +789,18 @@ async def post_shutdown(application: Application) -> None:
     logger.info("Healthcheck server stopped.")
 
 
+def register_handlers(app: Application) -> None:
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu_command))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("produk", produk_command))
+    app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
+    app.add_error_handler(error_handler)
+
+
 def build_application() -> Application:
     return (
         ApplicationBuilder()
@@ -779,29 +823,41 @@ def build_application() -> Application:
     )
 
 
-def main() -> None:
-    if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable.")
-
-    logger.info("Starting bot for store: %s", STORE_NAME)
+def run_bot() -> None:
     app = build_application()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("menu", menu_command))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("produk", produk_command))
-    app.add_handler(CommandHandler("admin", admin_command))
-    app.add_handler(CallbackQueryHandler(callback_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
-    app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
-    app.add_error_handler(error_handler)
-
+    register_handlers(app)
     app.run_polling(
         poll_interval=0.0,
         timeout=30,
         bootstrap_retries=-1,
-        drop_pending_updates=True,
+        drop_pending_updates=False,
     )
+
+
+def main() -> None:
+    if not BOT_TOKEN:
+        raise RuntimeError(
+            "BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable atau file .env."
+        )
+
+    while True:
+        try:
+            logger.info("Starting bot for store: %s", STORE_NAME)
+            run_bot()
+            logger.warning(
+                "Polling loop berhenti. Mencoba menjalankan ulang dalam %s detik.",
+                RESTART_DELAY_SECONDS,
+            )
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Bot dihentikan secara manual.")
+            break
+        except Exception:
+            logger.exception(
+                "Bot crash. Mencoba restart ulang dalam %s detik.",
+                RESTART_DELAY_SECONDS,
+            )
+
+        time.sleep(RESTART_DELAY_SECONDS)
 
 
 if __name__ == "__main__":
