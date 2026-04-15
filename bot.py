@@ -77,6 +77,7 @@ IDLE_RESET_SECONDS = max(get_int_env('IDLE_RESET_SECONDS', 900), 60)
 UI_FEEDBACK_DELAY = 0.28
 CALLBACK_FEEDBACK_DELAY = 0.18
 DOUBLE_CLICK_GUARD_SECONDS = 1.2
+MAX_TELEGRAM_CAPTION_LENGTH = 1024
 
 logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
@@ -334,14 +335,20 @@ def get_logo_path(category_key: str) -> Path | None:
 
 async def clear_logo_message(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
     chat_state = get_chat_state(context, chat_id)
-    logo_message_id = chat_state.pop('logo_message_id', None)
+    chat_state.pop('logo_message_id', None)
     chat_state.pop('logo_category_key', None)
 
-    if not logo_message_id:
-        return
 
-    with suppress(Exception):
-        await context.bot.delete_message(chat_id=chat_id, message_id=int(logo_message_id))
+async def ensure_logo_message(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    category_key: str,
+) -> None:
+    chat_state = get_chat_state(context, chat_id)
+    if get_logo_path(category_key):
+        chat_state['logo_category_key'] = category_key
+        return
+    chat_state.pop('logo_category_key', None)
 
 
 # =========================================================
@@ -712,19 +719,13 @@ async def reply_html(
             await message.get_bot().send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(UI_FEEDBACK_DELAY)
 
-    logo_path = get_logo_path(category_key) if category_key else None
-    if logo_path:
-        with logo_path.open('rb') as photo_file:
-            await message.get_bot().send_photo(
-                chat_id=message.chat_id,
-                photo=photo_file,
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML,
-            )
-        return
-
-    await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+    await send_view_message(
+        bot=message.get_bot(),
+        chat_id=message.chat_id,
+        text=text,
+        reply_markup=reply_markup,
+        category_key=category_key,
+    )
 
 
 async def send_main_menu(message, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -761,58 +762,71 @@ async def send_item(message, item_id: str, context: ContextTypes.DEFAULT_TYPE) -
     )
 
 
-async def edit_or_reply(
+async def send_view_message(
+    bot,
+    chat_id: int,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    category_key: str | None = None,
+) -> object:
+    logo_path = get_logo_path(category_key) if category_key else None
+    can_send_with_logo = bool(logo_path and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+
+    if can_send_with_logo:
+        try:
+            with logo_path.open('rb') as photo_file:
+                sent_message = await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo_file,
+                    caption=text,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
+                    disable_notification=True,
+                )
+            logger.info('Logo kategori %s berhasil dikirim ke chat %s.', category_key, chat_id)
+            return sent_message
+        except Exception:
+            logger.warning(
+                'Gagal mengirim tampilan dengan logo untuk kategori %s. Fallback ke teks.',
+                category_key,
+                exc_info=True,
+            )
+
+    return await bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=reply_markup,
+        parse_mode=ParseMode.HTML,
+        disable_notification=True,
+    )
+
+
+async def replace_query_message(
     query,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     category_key: str | None = None,
 ) -> None:
     message = query.message
-    logo_path = get_logo_path(category_key) if category_key else None
+    if not message:
+        return
 
+    await send_view_message(
+        bot=message.get_bot(),
+        chat_id=message.chat_id,
+        text=text,
+        reply_markup=reply_markup,
+        category_key=category_key,
+    )
     try:
-        if logo_path and message:
-            with logo_path.open('rb') as photo_file:
-                await message.get_bot().send_photo(
-                    chat_id=message.chat_id,
-                    photo=photo_file,
-                    caption=text,
-                    reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML,
-                )
-            with suppress(Exception):
-                await message.delete()
-            return
-
-        if message and message.photo:
-            await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
-            with suppress(Exception):
-                await message.delete()
-            return
-
-        await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
-    except BadRequest as exc:
-        error_text = str(exc).lower()
-        if 'message is not modified' in error_text:
-            return
-        if "message can't be edited" in error_text or 'there is no text in the message to edit' in error_text:
-            if message:
-                if logo_path:
-                    with logo_path.open('rb') as photo_file:
-                        await message.get_bot().send_photo(
-                            chat_id=message.chat_id,
-                            photo=photo_file,
-                            caption=text,
-                            reply_markup=reply_markup,
-                            parse_mode=ParseMode.HTML,
-                        )
-                else:
-                    await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
-                return
-        raise
+        await message.delete()
+    except BadRequest:
+        return
+    except Exception:
+        logger.warning('Gagal menghapus pesan lama setelah mengganti tampilan.', exc_info=True)
 
 
-async def answer_and_edit(
+async def answer_and_replace(
     query,
     answer_text: str,
     text: str,
@@ -829,13 +843,11 @@ async def answer_and_edit(
                     action=ChatAction.TYPING,
                 )
         await asyncio.sleep(CALLBACK_FEEDBACK_DELAY)
-        await edit_or_reply(query, text, reply_markup, category_key=category_key)
+        await replace_query_message(query, text, reply_markup, category_key=category_key)
         return
 
-    await asyncio.gather(
-        query.answer(answer_text),
-        edit_or_reply(query, text, reply_markup, category_key=category_key),
-    )
+    await query.answer(answer_text)
+    await replace_query_message(query, text, reply_markup, category_key=category_key)
 
 
 # =========================================================
@@ -940,7 +952,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if is_chat_idle(context, chat_id):
         await clear_logo_message(context, chat_id)
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Sesi lama di-reset.',
             idle_reset_text(),
@@ -956,7 +968,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if data == 'menu':
         await clear_logo_message(context, chat_id)
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Membuka menu...',
             welcome_text(),
@@ -967,7 +979,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if data == 'lihat_kategori':
         await clear_logo_message(context, chat_id)
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Menampilkan katalog...',
             catalog_intro_text(),
@@ -978,7 +990,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if data == 'bantuan':
         await clear_logo_message(context, chat_id)
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Membuka info order...',
             help_text(),
@@ -993,7 +1005,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Kategori tidak ditemukan.', show_alert=True)
             return
 
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Membuka kategori...',
             format_category_text(category_key),
@@ -1009,7 +1021,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Paket tidak ditemukan.', show_alert=True)
             return
 
-        await answer_and_edit(
+        await answer_and_replace(
             query,
             'Menyiapkan detail paket...',
             format_item_text(item_id),
