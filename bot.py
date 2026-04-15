@@ -499,49 +499,141 @@ def format_notes(title: str, notes: list[str]) -> list[str]:
     return lines + ['']
 
 
+def wrap_box_line(text: str, max_width: int) -> list[str]:
+    if not text:
+        return [""]
+
+    prefix = ""
+    continuation_prefix = ""
+
+    if text.startswith("• "):
+        prefix = "• "
+        continuation_prefix = "  "
+    else:
+        stripped = text.lstrip()
+        leading_spaces = len(text) - len(stripped)
+        if stripped and '.' in stripped:
+            head, tail = stripped.split('.', 1)
+            if head.isdigit() and tail.startswith(' '):
+                prefix = (' ' * leading_spaces) + head + '. '
+                continuation_prefix = ' ' * len(prefix)
+
+    content = text[len(prefix):] if prefix else text
+    words = content.split()
+    if not words:
+        return [prefix.rstrip() or ""]
+
+    lines: list[str] = []
+    current = prefix
+
+    for word in words:
+        spacer = "" if current.endswith(" ") or not current.strip() else " "
+        trial = f"{current}{spacer}{word}"
+        if len(trial) <= max_width:
+            current = trial
+        else:
+            if current:
+                lines.append(current)
+            next_prefix = continuation_prefix if lines else prefix
+            current = f"{next_prefix}{word}"
+
+    if current:
+        lines.append(current)
+
+    return lines
+
+
+def make_text_box(lines: list[str], title: str | None = None) -> str:
+    content = [line.rstrip() for line in lines if line is not None]
+    wrapped_content: list[str] = []
+    for line in content:
+        if line:
+            wrapped_content.extend(wrap_box_line(line, 34))
+        else:
+            wrapped_content.append('')
+
+    visible_lines = [line for line in wrapped_content if line]
+    max_len = max((len(line) for line in visible_lines), default=0)
+    width = max(26, min(max_len + 2, 34))
+
+    def pad(line: str = '') -> str:
+        return line + (' ' * max(width - len(line), 0))
+
+    box_lines: list[str] = []
+    if title:
+        title_text = f' {title} '
+        remain = max(width - len(title_text), 0)
+        left = remain // 2
+        right = remain - left
+        box_lines.append(f"╭{'─' * left}{title_text}{'─' * right}╮")
+    else:
+        box_lines.append(f"╭{'─' * width}╮")
+
+    for line in wrapped_content:
+        if line:
+            box_lines.append(f"│ {pad(line)} │")
+        else:
+            box_lines.append(f"│ {' ' * width} │")
+
+    box_lines.append(f"╰{'─' * width}╯")
+    return '\n'.join(box_lines)
+
+
 @lru_cache(maxsize=None)
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-
-    lines = [
+    sections = [
         f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
-        escape(data["description"]),
-        "",
+        f"<i>{escape(data['description'])}</i>",
+        '',
     ]
 
-    for index, item in enumerate(data["items"], start=1):
-        lines.extend(
-            [
-                f"<b>{index}. {escape(item['name'])}</b>",
-                f"• Durasi: <b>{escape(item['duration'])}</b>",
-                f"• Harga: <b>{escape(item['price'])}</b>",
-                "",
-            ]
-        )
+    for index, item in enumerate(data['items'], start=1):
+        box = make_text_box([
+            f"{index}. {item['name']}",
+            f"Durasi : {item['duration']}",
+            f"Harga  : {item['price']}",
+        ])
+        sections.append(f"<code>{escape(box)}</code>")
+        sections.append('')
 
-    lines.extend(format_notes("Catatan kategori:", data["category_notes"]))
-    lines.append("<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>")
-    return "\n".join(lines).strip()
+    if data['category_notes']:
+        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title='Catatan')
+        sections.append(f"<code>{escape(note_box)}</code>")
+        sections.append('')
+
+    sections.append('<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>')
+    return '\n'.join(sections).strip()
 
 
 @lru_cache(maxsize=None)
 def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
-    category_notes = PRODUCTS[item["category_key"]]["category_notes"]
+    category_notes = PRODUCTS[item['category_key']]['category_notes']
 
-    lines = [
-        f"<b>🧾 {escape(item['name'])}</b>",
-        f"• Kategori: <b>{escape(item['category_title'])}</b>",
-        f"• Durasi: <b>{escape(item['duration'])}</b>",
-        f"• Harga: <b>{escape(item['price'])}</b>",
-        f"• Kode: <code>{escape(item['id'].upper())}</code>",
-        "",
-    ]
+    summary_box = make_text_box([
+        item['name'],
+        '',
+        f"Kategori : {item['category_title']}",
+        f"Durasi   : {item['duration']}",
+        f"Harga    : {item['price']}",
+        f"Kode     : {item['id'].upper()}",
+    ], title='Detail Paket')
 
-    lines.extend(format_notes("Highlight / Detail:", item["notes"]))
-    lines.extend(format_notes("Catatan kategori:", category_notes))
-    lines.append("<i>Tekan tombol order untuk lanjut ke admin.</i>")
-    return "\n".join(lines).strip()
+    lines = [f"<code>{escape(summary_box)}</code>", '']
+
+    if item['notes']:
+        benefit_box = make_text_box([f"• {note}" for note in item['notes']], title='Highlight')
+        lines.append(f"<code>{escape(benefit_box)}</code>")
+        lines.append('')
+
+    if category_notes:
+        note_box = make_text_box([f"• {note}" for note in category_notes], title='Catatan')
+        lines.append(f"<code>{escape(note_box)}</code>")
+        lines.append('')
+
+    lines.append('<i>Tekan tombol order untuk mengirim format chat WhatsApp ke admin.</i>')
+    return '\n'.join(lines).strip()
 
 
 def fallback_text() -> str:
