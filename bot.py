@@ -303,12 +303,18 @@ def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[I
     return [buttons[index:index + size] for index in range(0, len(buttons), size)]
 
 
+def get_chat_state(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> dict:
+    # PTB menyediakan application.chat_data sebagai mapping read-only pada level atas,
+    # tetapi value per-chat tetap bisa diubah lewat indexing.
+    return context.application.chat_data[chat_id]
+
+
 def touch_chat(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    context.application.chat_data.setdefault(chat_id, {})['last_seen'] = time.time()
+    get_chat_state(context, chat_id)['last_seen'] = time.time()
 
 
 def is_chat_idle(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> bool:
-    chat_state = context.application.chat_data.setdefault(chat_id, {})
+    chat_state = get_chat_state(context, chat_id)
     last_seen = float(chat_state.get('last_seen', 0.0) or 0.0)
     now = time.time()
     chat_state['last_seen'] = now
@@ -672,9 +678,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.exception('Unhandled error while processing update', exc_info=context.error)
 
-    if isinstance(update, Update) and update.effective_message:
+    # Hindari spam pesan error berulang pada callback query.
+    if isinstance(update, Update) and update.message:
         with suppress(Exception):
-            await update.effective_message.reply_text(
+            await update.message.reply_text(
                 text='Maaf, bot lagi gangguan sebentar. Coba ulang lagi ya.',
                 reply_markup=main_menu_keyboard(),
             )
