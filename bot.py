@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+
+import asyncio
 import logging
 import os
 import time
 from contextlib import suppress
+from functools import lru_cache
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -71,11 +74,30 @@ STORE_NAME = os.getenv('STORE_NAME', 'reiizam store').strip()
 RESTART_DELAY_SECONDS = max(get_int_env('RESTART_DELAY_SECONDS', 5), 1)
 IDLE_RESET_SECONDS = max(get_int_env('IDLE_RESET_SECONDS', 900), 60)
 
+UI_FEEDBACK_DELAY = 0.28
+CALLBACK_FEEDBACK_DELAY = 0.18
+DOUBLE_CLICK_GUARD_SECONDS = 1.2
+
 logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
+
+BASE_DIR = Path(__file__).resolve().parent
+LOGO_DIR = BASE_DIR / 'assets' / 'logos'
+CATEGORY_LOGOS = {
+    'canva': LOGO_DIR / 'canva.jpg',
+    'chatgpt': LOGO_DIR / 'chatgpt.jpg',
+    'youtube': LOGO_DIR / 'youtube.jpg',
+    'netflix_harian': LOGO_DIR / 'netflix.jpg',
+    'netflix_bulanan': LOGO_DIR / 'netflix.jpg',
+    'apple_music': LOGO_DIR / 'apple_music.jpg',
+    'alight_motion': LOGO_DIR / 'alight_motion.jpg',
+    'wink': LOGO_DIR / 'wink.jpg',
+}
 
 # =========================================================
 # DATA PRODUK
@@ -209,8 +231,8 @@ PRODUCTS = {
         'icon': '💖',
         'description': 'Pilihan paket Wink dengan opsi sharing, private, dan jaspay.',
         'items': [
-            {'id': 'wink_01', 'name': 'Haring', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
-            {'id': 'wink_02', 'name': 'Haring', 'duration': '1 bulan', 'price': 'Rp30.000', 'notes': []},
+            {'id': 'wink_01', 'name': 'Sharing', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
+            {'id': 'wink_02', 'name': 'Sharing', 'duration': '1 bulan', 'price': 'Rp30.000', 'notes': []},
             {'id': 'wink_03', 'name': 'Private', 'duration': '7 hari', 'price': 'Rp15.000', 'notes': []},
             {'id': 'wink_04', 'name': 'Jaspay', 'duration': '7 hari', 'price': 'Rp12.000', 'notes': []},
         ],
@@ -303,38 +325,29 @@ def is_chat_idle(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> bool:
     return (now - last_seen) >= IDLE_RESET_SECONDS
 
 
+def get_logo_path(category_key: str) -> Path | None:
+    logo_path = CATEGORY_LOGOS.get(category_key)
+    if not logo_path or not logo_path.exists():
+        return None
+    return logo_path
+
+
+async def clear_logo_message(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    chat_state = get_chat_state(context, chat_id)
+    logo_message_id = chat_state.pop('logo_message_id', None)
+    chat_state.pop('logo_category_key', None)
+
+    if not logo_message_id:
+        return
+
+    with suppress(Exception):
+        await context.bot.delete_message(chat_id=chat_id, message_id=int(logo_message_id))
+
+
 # =========================================================
 # UI HELPERS
 # =========================================================
 
-
-def make_text_box(lines: list[str], title: str | None = None) -> str:
-    content = [line.rstrip() for line in lines if line is not None]
-    visible_lines = [line for line in content if line]
-    max_len = max((len(line) for line in visible_lines), default=0)
-    width = max(26, min(max_len + 2, 34))
-
-    def pad(line: str = '') -> str:
-        return line + (' ' * max(width - len(line), 0))
-
-    box_lines: list[str] = []
-    if title:
-        title_text = f' {title} '
-        remain = max(width - len(title_text), 0)
-        left = remain // 2
-        right = remain - left
-        box_lines.append(f"╭{'─' * left}{title_text}{'─' * right}╮")
-    else:
-        box_lines.append(f"╭{'─' * width}╮")
-
-    for line in content:
-        if line:
-            box_lines.append(f"│ {pad(line)} │")
-        else:
-            box_lines.append(f"│ {' ' * width} │")
-
-    box_lines.append(f"╰{'─' * width}╯")
-    return '\n'.join(box_lines)
 
 def build_admin_url(message: str | None = None) -> str:
     if not message:
@@ -346,7 +359,7 @@ def build_order_message(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
     return (
         'Halo admin, saya mau order.\n'
-        f"{item['name']} - {item['duration']} - {item['price']}\n"
+        f"*{item['name']}* - *{item['duration']}* - *{item['price']}*\n"
         'Mohon info stok.'
     )
 
@@ -355,15 +368,17 @@ def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[I
     return [buttons[index:index + size] for index in range(0, len(buttons), size)]
 
 
+@lru_cache(maxsize=1)
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton('🛍️ Lihat Katalog', callback_data='lihat_kategori')],
-            [InlineKeyboardButton('📌 Info Order', callback_data='bantuan')],
+            [InlineKeyboardButton('🛍️ Lihat Katalog Premium', callback_data='lihat_kategori')],
+            [InlineKeyboardButton('📌 Cara Order Cepat', callback_data='bantuan')],
         ]
     )
 
 
+@lru_cache(maxsize=1)
 def category_menu_keyboard() -> InlineKeyboardMarkup:
     category_buttons = [
         InlineKeyboardButton(f"{data['icon']} {data['title']}", callback_data=f'cat_{key}')
@@ -374,6 +389,7 @@ def category_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+@lru_cache(maxsize=1)
 def netflix_choice_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -386,6 +402,7 @@ def netflix_choice_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+@lru_cache(maxsize=None)
 def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     for item in PRODUCTS[category_key]['items']:
@@ -399,6 +416,7 @@ def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+@lru_cache(maxsize=None)
 def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
     return InlineKeyboardMarkup(
@@ -410,36 +428,57 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     )
 
 
+@lru_cache(maxsize=1)
 def welcome_text() -> str:
     return (
-        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
-        'Mau cari <b>app premium murah dan bergaransi</b>?\n'
-        'Disini saja bre, untuk product sebenernya masih banyak,\n'
-        'cuma sayanya lagi cape segini dulu aja ya.\n\n'
-        'Kalau ada yang mau ditanyakan, <b>sung dm aja ya bre</b>.'
+        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
+        '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
+        '<b>Yang tersedia di sini:</b>\n'
+        '• Canva\n'
+        '• ChatGPT\n'
+        '• Netflix\n'
+        '• YouTube\n'
+        '• Apple Music\n'
+        '• Alight Motion\n'
+        '• Wink\n\n'
+        '<b>Kenapa order di sini?</b>\n'
+        '• Harga santai\n'
+        '• Paket lengkap\n'
+        '• Tinggal pilih lalu lanjut ke WhatsApp admin\n\n'
+        'Kalau ada yang mau ditanyakan, <b>sung dm aja ya bre</b>.\n'
+        '<i>Pilih menu di bawah untuk mulai lihat katalog.</i>'
     )
 
 
+@lru_cache(maxsize=1)
 def catalog_intro_text() -> str:
     return (
         '<b>🛍️ Katalog Produk</b>\n'
-        '━━━━━━━━━━━━\n\n'
-        'Sok dipilih dulu aja ya,\n'
-        'kalo udah nemu product yang ingin dibeli,\n'
-        'nanti langsung diarahin sama si bot nya ke WA saya ya bre.'
+        '<i>Pilih app yang kamu butuhin, lalu lanjut ke detail paketnya.</i>\n\n'
+        '<b>Flow order:</b>\n'
+        '1. Pilih kategori app\n'
+        '2. Pilih paket yang cocok\n'
+        '3. Tekan tombol order\n'
+        '4. Langsung lanjut ke WhatsApp admin\n\n'
+        '<i>Sok dipilih dulu aja ya bre.</i>'
     )
 
 
+@lru_cache(maxsize=1)
 def help_text() -> str:
     return (
         '<b>📌 INFO ORDER</b>\n'
-        '━━━━━━━━━━━━\n\n'
-        'Sok dipilih dulu aja ya.\n'
+        '<i>Biar cepat, alurnya tinggal begini:</i>\n\n'
+        '1. Buka katalog\n'
+        '2. Pilih kategori produk\n'
+        '3. Pilih paket yang diinginkan\n'
+        '4. Tekan tombol order ke WhatsApp\n\n'
         'Kalau udah nemu product yang ingin dibeli,\n'
         'nanti langsung diarahin sama si bot nya ke WA saya ya bre.'
     )
 
 
+@lru_cache(maxsize=1)
 def netflix_prompt_text() -> str:
     return (
         '<b>📺 Netflix tersedia dalam dua pilihan</b>\n'
@@ -460,59 +499,49 @@ def format_notes(title: str, notes: list[str]) -> list[str]:
     return lines + ['']
 
 
+@lru_cache(maxsize=None)
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-    sections = [
+
+    lines = [
         f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
-        f"<i>{escape(data['description'])}</i>",
-        '',
+        escape(data["description"]),
+        "",
     ]
 
-    for index, item in enumerate(data['items'], start=1):
-        box = make_text_box([
-            f"{index}. {item['name']}",
-            f"Durasi : {item['duration']}",
-            f"Harga  : {item['price']}",
-        ])
-        sections.append(f"<code>{escape(box)}</code>")
-        sections.append('')
+    for index, item in enumerate(data["items"], start=1):
+        lines.extend(
+            [
+                f"<b>{index}. {escape(item['name'])}</b>",
+                f"• Durasi: <b>{escape(item['duration'])}</b>",
+                f"• Harga: <b>{escape(item['price'])}</b>",
+                "",
+            ]
+        )
 
-    if data['category_notes']:
-        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title='Catatan')
-        sections.append(f"<code>{escape(note_box)}</code>")
-        sections.append('')
-
-    sections.append('<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>')
-    return '\n'.join(sections).strip()
+    lines.extend(format_notes("Catatan kategori:", data["category_notes"]))
+    lines.append("<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>")
+    return "\n".join(lines).strip()
 
 
+@lru_cache(maxsize=None)
 def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
-    category_notes = PRODUCTS[item['category_key']]['category_notes']
+    category_notes = PRODUCTS[item["category_key"]]["category_notes"]
 
-    summary_box = make_text_box([
-        item['name'],
-        '',
-        f"Kategori : {item['category_title']}",
-        f"Durasi   : {item['duration']}",
-        f"Harga    : {item['price']}",
-        f"Kode     : {item['id'].upper()}",
-    ], title='Detail Paket')
+    lines = [
+        f"<b>🧾 {escape(item['name'])}</b>",
+        f"• Kategori: <b>{escape(item['category_title'])}</b>",
+        f"• Durasi: <b>{escape(item['duration'])}</b>",
+        f"• Harga: <b>{escape(item['price'])}</b>",
+        f"• Kode: <code>{escape(item['id'].upper())}</code>",
+        "",
+    ]
 
-    lines = [f"<code>{escape(summary_box)}</code>", '']
-
-    if item['notes']:
-        benefit_box = make_text_box([f"• {note}" for note in item['notes']], title='Highlight')
-        lines.append(f"<code>{escape(benefit_box)}</code>")
-        lines.append('')
-
-    if category_notes:
-        note_box = make_text_box([f"• {note}" for note in category_notes], title='Catatan')
-        lines.append(f"<code>{escape(note_box)}</code>")
-        lines.append('')
-
-    lines.append('<i>Tekan tombol order untuk mengirim format chat WhatsApp ke admin.</i>')
-    return '\n'.join(lines).strip()
+    lines.extend(format_notes("Highlight / Detail:", item["notes"]))
+    lines.extend(format_notes("Catatan kategori:", category_notes))
+    lines.append("<i>Tekan tombol order untuk lanjut ke admin.</i>")
+    return "\n".join(lines).strip()
 
 
 def fallback_text() -> str:
@@ -523,6 +552,7 @@ def fallback_text() -> str:
     )
 
 
+@lru_cache(maxsize=1)
 def idle_reset_text() -> str:
     minutes = max(IDLE_RESET_SECONDS // 60, 1)
     return (
@@ -530,6 +560,22 @@ def idle_reset_text() -> str:
         '━━━━━━━━━━━━\n\n'
         f'Chat sempat tidak aktif sekitar {minutes} menit, jadi bot balik ke menu utama dulu ya bre.'
     )
+
+
+def is_duplicate_callback(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    data: str,
+    message_id: int | None,
+) -> bool:
+    chat_state = get_chat_state(context, chat_id)
+    now = time.time()
+    callback_key = f'{message_id or 0}:{data}'
+    last_data = str(chat_state.get('last_callback_data', '') or '')
+    last_seen = float(chat_state.get('last_callback_at', 0.0) or 0.0)
+    chat_state['last_callback_data'] = callback_key
+    chat_state['last_callback_at'] = now
+    return callback_key == last_data and (now - last_seen) < DOUBLE_CLICK_GUARD_SECONDS
 
 
 def match_category_by_text(text: str) -> str | None:
@@ -562,46 +608,152 @@ def wants_main_menu_reset(text: str) -> bool:
     )
 
 
-async def reply_html(message, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+async def reply_html(
+    message,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    with_typing_feedback: bool = False,
+    category_key: str | None = None,
+) -> None:
+    if with_typing_feedback:
+        with suppress(Exception):
+            await message.get_bot().send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
+        await asyncio.sleep(UI_FEEDBACK_DELAY)
+
+    logo_path = get_logo_path(category_key) if category_key else None
+    if logo_path:
+        with logo_path.open('rb') as photo_file:
+            await message.reply_photo(
+                photo=photo_file,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+            )
+        return
+
     await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 
 async def send_main_menu(message, context: ContextTypes.DEFAULT_TYPE) -> None:
     touch_chat(context, message.chat_id)
-    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
-    await reply_html(message, welcome_text(), main_menu_keyboard())
+    await clear_logo_message(context, message.chat_id)
+    await reply_html(message, welcome_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
 async def send_catalog(message, context: ContextTypes.DEFAULT_TYPE) -> None:
     touch_chat(context, message.chat_id)
-    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
-    await reply_html(message, catalog_intro_text(), category_menu_keyboard())
+    await clear_logo_message(context, message.chat_id)
+    await reply_html(message, catalog_intro_text(), category_menu_keyboard(), with_typing_feedback=True)
 
 
 async def send_category(message, category_key: str, context: ContextTypes.DEFAULT_TYPE) -> None:
     touch_chat(context, message.chat_id)
-    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
-    await reply_html(message, format_category_text(category_key), item_menu_keyboard(category_key))
+    await reply_html(
+        message,
+        format_category_text(category_key),
+        item_menu_keyboard(category_key),
+        with_typing_feedback=True,
+        category_key=category_key,
+    )
 
 
 async def send_item(message, item_id: str, context: ContextTypes.DEFAULT_TYPE) -> None:
     touch_chat(context, message.chat_id)
-    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
-    await reply_html(message, format_item_text(item_id), order_keyboard(item_id))
+    await reply_html(
+        message,
+        format_item_text(item_id),
+        order_keyboard(item_id),
+        with_typing_feedback=True,
+        category_key=ITEM_LOOKUP[item_id]['category_key'],
+    )
 
 
-async def edit_or_reply(query, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+async def edit_or_reply(
+    query,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    category_key: str | None = None,
+) -> None:
+    message = query.message
+    logo_path = get_logo_path(category_key) if category_key else None
+
     try:
+        if logo_path:
+            if message and message.photo:
+                with logo_path.open('rb') as photo_file:
+                    await query.edit_message_media(
+                        media=InputMediaPhoto(
+                            media=photo_file,
+                            caption=text,
+                            parse_mode=ParseMode.HTML,
+                        ),
+                        reply_markup=reply_markup,
+                    )
+                return
+
+            if message:
+                with logo_path.open('rb') as photo_file:
+                    await message.reply_photo(
+                        photo=photo_file,
+                        caption=text,
+                        reply_markup=reply_markup,
+                        parse_mode=ParseMode.HTML,
+                    )
+                with suppress(Exception):
+                    await message.delete()
+                return
+
+        if message and message.photo:
+            await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+            with suppress(Exception):
+                await message.delete()
+            return
+
         await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
     except BadRequest as exc:
         error_text = str(exc).lower()
         if 'message is not modified' in error_text:
             return
         if "message can't be edited" in error_text or 'there is no text in the message to edit' in error_text:
-            if query.message:
-                await query.message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+            if message:
+                if logo_path:
+                    with logo_path.open('rb') as photo_file:
+                        await message.reply_photo(
+                            photo=photo_file,
+                            caption=text,
+                            reply_markup=reply_markup,
+                            parse_mode=ParseMode.HTML,
+                        )
+                else:
+                    await message.reply_text(text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
                 return
         raise
+
+
+async def answer_and_edit(
+    query,
+    answer_text: str,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    with_feedback: bool = False,
+    category_key: str | None = None,
+) -> None:
+    if with_feedback:
+        await query.answer(answer_text)
+        if query.message:
+            with suppress(Exception):
+                await query.message.get_bot().send_chat_action(
+                    chat_id=query.message.chat_id,
+                    action=ChatAction.TYPING,
+                )
+        await asyncio.sleep(CALLBACK_FEEDBACK_DELAY)
+        await edit_or_reply(query, text, reply_markup, category_key=category_key)
+        return
+
+    await asyncio.gather(
+        query.answer(answer_text),
+        edit_or_reply(query, text, reply_markup, category_key=category_key),
+    )
 
 
 # =========================================================
@@ -621,7 +773,8 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         touch_chat(context, update.message.chat_id)
-        await reply_html(update.message, help_text(), main_menu_keyboard())
+        await clear_logo_message(context, update.message.chat_id)
+        await reply_html(update.message, help_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
 async def produk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -637,11 +790,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     normalized = normalize_text(message.text)
 
     if is_chat_idle(context, message.chat_id) and not wants_main_menu_reset(message.text):
-        await reply_html(message, idle_reset_text(), main_menu_keyboard())
+        await clear_logo_message(context, message.chat_id)
+        await reply_html(message, idle_reset_text(), main_menu_keyboard(), with_typing_feedback=True)
         return
 
     if not normalized:
-        await reply_html(message, fallback_text(), main_menu_keyboard())
+        await clear_logo_message(context, message.chat_id)
+        await reply_html(message, fallback_text(), main_menu_keyboard(), with_typing_feedback=True)
         return
 
     if wants_main_menu_reset(message.text):
@@ -654,7 +809,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if matches_alias(normalized, 'netflix') and not matches_alias(normalized, 'harian') and not matches_alias(normalized, 'bulanan'):
         touch_chat(context, message.chat_id)
-        await reply_html(message, netflix_prompt_text(), netflix_choice_keyboard())
+        await reply_html(
+            message,
+            netflix_prompt_text(),
+            netflix_choice_keyboard(),
+            with_typing_feedback=True,
+            category_key='netflix_harian',
+        )
         return
 
     item_id = match_item_by_text(normalized)
@@ -668,15 +829,19 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     touch_chat(context, message.chat_id)
-    await reply_html(message, fallback_text(), main_menu_keyboard())
+    await clear_logo_message(context, message.chat_id)
+    await reply_html(message, fallback_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         touch_chat(context, update.message.chat_id)
-        await update.message.reply_text(
+        await clear_logo_message(context, update.message.chat_id)
+        await reply_html(
+            update.message,
             text='Perintah belum tersedia. Gunakan menu di bawah ya.',
             reply_markup=main_menu_keyboard(),
+            with_typing_feedback=True,
         )
 
 
@@ -692,25 +857,52 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if is_chat_idle(context, chat_id):
-        await query.answer('Sesi lama di-reset.', show_alert=False)
-        await edit_or_reply(query, idle_reset_text(), main_menu_keyboard())
+        await clear_logo_message(context, chat_id)
+        await answer_and_edit(
+            query,
+            'Sesi lama di-reset.',
+            idle_reset_text(),
+            main_menu_keyboard(),
+            with_feedback=True,
+        )
         return
 
     data = query.data or ''
+    if is_duplicate_callback(context, chat_id, data, message.message_id if message else None):
+        await query.answer()
+        return
 
     if data == 'menu':
-        await query.answer('Membuka menu...')
-        await edit_or_reply(query, welcome_text(), main_menu_keyboard())
+        await clear_logo_message(context, chat_id)
+        await answer_and_edit(
+            query,
+            'Membuka menu...',
+            welcome_text(),
+            main_menu_keyboard(),
+            with_feedback=True,
+        )
         return
 
     if data == 'lihat_kategori':
-        await query.answer('Menampilkan katalog...')
-        await edit_or_reply(query, catalog_intro_text(), category_menu_keyboard())
+        await clear_logo_message(context, chat_id)
+        await answer_and_edit(
+            query,
+            'Menampilkan katalog...',
+            catalog_intro_text(),
+            category_menu_keyboard(),
+            with_feedback=True,
+        )
         return
 
     if data == 'bantuan':
-        await query.answer('Membuka info order...')
-        await edit_or_reply(query, help_text(), main_menu_keyboard())
+        await clear_logo_message(context, chat_id)
+        await answer_and_edit(
+            query,
+            'Membuka info order...',
+            help_text(),
+            main_menu_keyboard(),
+            with_feedback=True,
+        )
         return
 
     if data.startswith('cat_'):
@@ -719,8 +911,14 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Kategori tidak ditemukan.', show_alert=True)
             return
 
-        await query.answer('Membuka kategori...')
-        await edit_or_reply(query, format_category_text(category_key), item_menu_keyboard(category_key))
+        await answer_and_edit(
+            query,
+            'Membuka kategori...',
+            format_category_text(category_key),
+            item_menu_keyboard(category_key),
+            with_feedback=True,
+            category_key=category_key,
+        )
         return
 
     if data.startswith('item_'):
@@ -729,8 +927,14 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Paket tidak ditemukan.', show_alert=True)
             return
 
-        await query.answer('Menyiapkan detail paket...')
-        await edit_or_reply(query, format_item_text(item_id), order_keyboard(item_id))
+        await answer_and_edit(
+            query,
+            'Menyiapkan detail paket...',
+            format_item_text(item_id),
+            order_keyboard(item_id),
+            with_feedback=True,
+            category_key=ITEM_LOOKUP[item_id]['category_key'],
+        )
         return
 
     await query.answer('Aksi tidak dikenali.', show_alert=True)
