@@ -22,9 +22,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WA_NUMBER = os.getenv("WA_NUMBER", "6285126019233").strip()
 STORE_NAME = os.getenv("STORE_NAME", "reiizam store").strip()
 
-if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable.")
-
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     level=logging.INFO,
@@ -393,6 +390,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 def main() -> None:
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable.")
+
     logger.info("Starting bot for store: %s", STORE_NAME)
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
