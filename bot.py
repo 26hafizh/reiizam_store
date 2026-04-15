@@ -25,6 +25,7 @@ from telegram.ext import (
 # KONFIGURASI
 # =========================================================
 
+
 def load_local_env() -> None:
     env_candidates = [
         Path('.env'),
@@ -82,8 +83,8 @@ logger = logging.getLogger(__name__)
 PRODUCTS = {
     'canva': {
         'title': 'Canva',
-        'icon': '🖌️',
-        'description': 'Paket desain premium untuk editing, branding, dan konten harian.',
+        'icon': '🎨',
+        'description': 'Paket desain untuk kebutuhan konten, branding, dan editing harian.',
         'items': [
             {'id': 'canva_01', 'name': 'Member Pro', 'duration': '1 bulan', 'price': 'Rp5.000', 'notes': []},
             {'id': 'canva_02', 'name': 'Member Pro', 'duration': '2 bulan', 'price': 'Rp10.000', 'notes': []},
@@ -93,8 +94,8 @@ PRODUCTS = {
     },
     'chatgpt': {
         'title': 'ChatGPT',
-        'icon': '🧠',
-        'description': 'Paket AI premium untuk nugas, kerja, ide konten, dan produktivitas.',
+        'icon': '🤖',
+        'description': 'Pilihan paket AI premium untuk kebutuhan chat, ide, dan produktivitas.',
         'items': [
             {
                 'id': 'chatgpt_01',
@@ -127,8 +128,8 @@ PRODUCTS = {
     },
     'youtube': {
         'title': 'YouTube',
-        'icon': '📹',
-        'description': 'Paket YouTube Premium tanpa iklan dengan harga ringan.',
+        'icon': '▶️',
+        'description': 'Paket YouTube premium untuk nonton tanpa iklan dengan harga ringan.',
         'items': [
             {'id': 'youtube_01', 'name': 'Famplan (Invite)', 'duration': '1 bulan', 'price': 'Rp4.000', 'notes': []},
             {'id': 'youtube_02', 'name': 'Indplan', 'duration': '1 bulan', 'price': 'Rp7.000', 'notes': []},
@@ -138,8 +139,8 @@ PRODUCTS = {
     },
     'netflix_harian': {
         'title': 'Netflix Harian',
-        'icon': '🍿',
-        'description': 'Paket harian yang fleksibel untuk nonton cepat tanpa ribet.',
+        'icon': '📺',
+        'description': 'Pilihan harian untuk kebutuhan nonton cepat dan fleksibel.',
         'items': [
             {'id': 'neth_01', 'name': '1 Hari 2 User', 'duration': '1 hari', 'price': 'Rp3.000', 'notes': []},
             {'id': 'neth_02', 'name': '1 Hari 1 User', 'duration': '1 hari', 'price': 'Rp5.000', 'notes': []},
@@ -151,8 +152,8 @@ PRODUCTS = {
     },
     'netflix_bulanan': {
         'title': 'Netflix Bulanan',
-        'icon': '🎞️',
-        'description': 'Paket bulanan buat pengalaman nonton yang lebih nyaman.',
+        'icon': '🎬',
+        'description': 'Paket bulanan buat yang ingin pengalaman nonton lebih nyaman.',
         'items': [
             {
                 'id': 'netb_01',
@@ -178,7 +179,7 @@ PRODUCTS = {
     },
     'apple_music': {
         'title': 'Apple Music',
-        'icon': '🎧',
+        'icon': '🎵',
         'description': 'Paket musik premium untuk pengalaman dengar yang lebih nyaman.',
         'items': [
             {'id': 'apple_01', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': []},
@@ -195,8 +196,8 @@ PRODUCTS = {
     },
     'alight_motion': {
         'title': 'Alight Motion',
-        'icon': '🎬',
-        'description': 'Paket editing motion untuk video kreatif dan kebutuhan konten.',
+        'icon': '✨',
+        'description': 'Paket editing motion untuk kebutuhan konten dan video kreatif.',
         'items': [
             {'id': 'alight_01', 'name': 'Private - Akun Seller', 'duration': '1 tahun', 'price': 'Rp10.000', 'notes': []},
             {'id': 'alight_02', 'name': 'Private - Akun Buyer', 'duration': '1 tahun', 'price': 'Rp15.000', 'notes': ['Proses slow']},
@@ -205,7 +206,7 @@ PRODUCTS = {
     },
     'wink': {
         'title': 'Wink',
-        'icon': '📸',
+        'icon': '💖',
         'description': 'Pilihan paket Wink dengan opsi sharing, private, dan jaspay.',
         'items': [
             {'id': 'wink_01', 'name': 'Haring', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
@@ -280,32 +281,11 @@ for category_key, category_data in PRODUCTS.items():
         ITEM_ALIASES[item['id']] = aliases
 
 
-def build_admin_url(message: str | None = None) -> str:
-    if not message:
-        return f'https://wa.me/{WA_NUMBER}'
-    return f'https://wa.me/{WA_NUMBER}?text={quote(message)}'
-
-
-def build_order_message(item_id: str) -> str:
-    item = ITEM_LOOKUP[item_id]
-    return (
-        'Halo admin, saya mau order.\n'
-        f"Produk: {item['category_title']}\n"
-        f"Paket: {item['name']}\n"
-        f"Durasi: {item['duration']}\n"
-        f"Harga: {item['price']}\n"
-        f"Kode: {item['id'].upper()}\n"
-        'Mohon info stok ya.'
-    )
-
-
-def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[InlineKeyboardButton]]:
-    return [buttons[index:index + size] for index in range(0, len(buttons), size)]
-
+# =========================================================
+# SESSION STATE
+# =========================================================
 
 def get_chat_state(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> dict:
-    # PTB menyediakan application.chat_data sebagai mapping read-only pada level atas,
-    # tetapi value per-chat tetap bisa diubah lewat indexing.
     return context.application.chat_data[chat_id]
 
 
@@ -323,11 +303,63 @@ def is_chat_idle(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> bool:
     return (now - last_seen) >= IDLE_RESET_SECONDS
 
 
+# =========================================================
+# UI HELPERS
+# =========================================================
+
+
+def make_text_box(lines: list[str], title: str | None = None) -> str:
+    content = [line.rstrip() for line in lines if line is not None]
+    visible_lines = [line for line in content if line]
+    max_len = max((len(line) for line in visible_lines), default=0)
+    width = max(26, min(max_len + 2, 34))
+
+    def pad(line: str = '') -> str:
+        return line + (' ' * max(width - len(line), 0))
+
+    box_lines: list[str] = []
+    if title:
+        title_text = f' {title} '
+        remain = max(width - len(title_text), 0)
+        left = remain // 2
+        right = remain - left
+        box_lines.append(f"╭{'─' * left}{title_text}{'─' * right}╮")
+    else:
+        box_lines.append(f"╭{'─' * width}╮")
+
+    for line in content:
+        if line:
+            box_lines.append(f"│ {pad(line)} │")
+        else:
+            box_lines.append(f"│ {' ' * width} │")
+
+    box_lines.append(f"╰{'─' * width}╯")
+    return '\n'.join(box_lines)
+
+def build_admin_url(message: str | None = None) -> str:
+    if not message:
+        return f'https://wa.me/{WA_NUMBER}'
+    return f'https://wa.me/{WA_NUMBER}?text={quote(message)}'
+
+
+def build_order_message(item_id: str) -> str:
+    item = ITEM_LOOKUP[item_id]
+    return (
+        'Halo admin, saya mau order.\n'
+        f"{item['name']} - {item['duration']} - {item['price']}\n"
+        'Mohon info stok.'
+    )
+
+
+def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[InlineKeyboardButton]]:
+    return [buttons[index:index + size] for index in range(0, len(buttons), size)]
+
+
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton('🛍️ Lihat Katalog', callback_data='lihat_kategori')],
-            [InlineKeyboardButton('📌 Cara Order', callback_data='bantuan')],
+            [InlineKeyboardButton('📌 Info Order', callback_data='bantuan')],
         ]
     )
 
@@ -346,8 +378,8 @@ def netflix_choice_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton('🍿 Netflix Harian', callback_data='cat_netflix_harian'),
-                InlineKeyboardButton('🎞️ Netflix Bulanan', callback_data='cat_netflix_bulanan'),
+                InlineKeyboardButton('📺 Netflix Harian', callback_data='cat_netflix_harian'),
+                InlineKeyboardButton('🎬 Netflix Bulanan', callback_data='cat_netflix_bulanan'),
             ],
             [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
         ]
@@ -357,9 +389,9 @@ def netflix_choice_keyboard() -> InlineKeyboardMarkup:
 def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     for item in PRODUCTS[category_key]['items']:
-        label = f"{item['name']} • {item['price']}"
-        if len(label) > 34:
-            label = f"{item['duration']} • {item['price']}"
+        label = f"{item['name']} | {item['price']}"
+        if len(label) > 38:
+            label = f"{item['duration']} | {item['price']}"
         rows.append([InlineKeyboardButton(label, callback_data=f"item_{item['id']}")])
 
     rows.append([InlineKeyboardButton('⬅️ Kembali ke Kategori', callback_data='lihat_kategori')])
@@ -371,8 +403,8 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton('🛒 Lanjut Order via WhatsApp', url=build_admin_url(build_order_message(item_id)))],
-            [InlineKeyboardButton('⬅️ Kembali ke List Paket', callback_data=f"cat_{item['category_key']}")],
+            [InlineKeyboardButton('✅ Order via WhatsApp', url=build_admin_url(build_order_message(item_id)))],
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
             [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
         ]
     )
@@ -380,42 +412,39 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 def welcome_text() -> str:
     return (
-        f"<b>✨ {escape(STORE_NAME.upper())}</b>\n"
-        '<blockquote>App premium murah, rapi, dan gampang order.</blockquote>\n\n'
-        '<b>Yang bisa kamu lakukan di sini:</b>\n'
-        '• Lihat kategori produk\n'
-        '• Cek detail paket\n'
-        '• Lanjut order otomatis ke WhatsApp admin\n\n'
-        '<i>Pilih menu di bawah untuk mulai.</i>'
+        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
+        'Mau cari <b>app premium murah dan bergaransi</b>?\n'
+        'Disini saja bre, untuk product sebenernya masih banyak,\n'
+        'cuma sayanya lagi cape segini dulu aja ya.\n\n'
+        'Kalau ada yang mau ditanyakan, <b>sung dm aja ya bre</b>.'
     )
 
 
 def catalog_intro_text() -> str:
     return (
-        '<b>🛍️ KATALOG PRODUK</b>\n'
-        '━━━━━━━━━━\n\n'
-        'Pilih kategori yang kamu mau dulu.\n'
-        'Setelah itu tinggal buka detail paket dan lanjut order ke admin.'
+        '<b>🛍️ Katalog Produk</b>\n'
+        '━━━━━━━━━━━━\n\n'
+        'Sok dipilih dulu aja ya,\n'
+        'kalo udah nemu product yang ingin dibeli,\n'
+        'nanti langsung diarahin sama si bot nya ke WA saya ya bre.'
     )
 
 
 def help_text() -> str:
     return (
-        '<b>📌 CARA ORDER</b>\n'
-        '━━━━━━━━━━\n\n'
-        '1. Pilih kategori produk\n'
-        '2. Tap paket yang kamu mau\n'
-        '3. Cek detail dan benefit\n'
-        '4. Tekan tombol order untuk lanjut ke WhatsApp admin\n\n'
-        '<i>Pastikan tanyakan stok dulu sebelum transfer ya.</i>'
+        '<b>📌 INFO ORDER</b>\n'
+        '━━━━━━━━━━━━\n\n'
+        'Sok dipilih dulu aja ya.\n'
+        'Kalau udah nemu product yang ingin dibeli,\n'
+        'nanti langsung diarahin sama si bot nya ke WA saya ya bre.'
     )
 
 
 def netflix_prompt_text() -> str:
     return (
-        '<b>🎬 PILIH KATEGORI NETFLIX</b>\n'
-        '━━━━━━━━━━\n\n'
-        'Kamu mau lihat paket yang mana dulu?\n'
+        '<b>📺 Netflix tersedia dalam dua pilihan</b>\n'
+        '━━━━━━━━━━━━\n\n'
+        'Pilih versi yang mau kamu lihat dulu:\n'
         '• Harian\n'
         '• Bulanan'
     )
@@ -433,59 +462,73 @@ def format_notes(title: str, notes: list[str]) -> list[str]:
 
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-    lines = [
-        f"<b>{escape(data['icon'])} {escape(data['title']).upper()}</b>",
-        '━━━━━━━━━━',
+    sections = [
+        f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
         f"<i>{escape(data['description'])}</i>",
         '',
     ]
 
     for index, item in enumerate(data['items'], start=1):
-        lines.append(f"<b>{index}. {escape(item['name'])}</b>")
-        lines.append(f"• Durasi: {escape(item['duration'])}")
-        lines.append(f"• Harga: <b>{escape(item['price'])}</b>")
-        lines.append('')
+        box = make_text_box([
+            f"{index}. {item['name']}",
+            f"Durasi : {item['duration']}",
+            f"Harga  : {item['price']}",
+        ])
+        sections.append(f"<code>{escape(box)}</code>")
+        sections.append('')
 
-    lines.extend(format_notes('ℹ️ Catatan kategori', data['category_notes']))
-    lines.append('<i>Tap salah satu paket di bawah untuk lihat detail dan lanjut order.</i>')
-    return '\n'.join(lines).strip()
+    if data['category_notes']:
+        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title='Catatan')
+        sections.append(f"<code>{escape(note_box)}</code>")
+        sections.append('')
+
+    sections.append('<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>')
+    return '\n'.join(sections).strip()
 
 
 def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
     category_notes = PRODUCTS[item['category_key']]['category_notes']
 
-    lines = [
-        '<b>🧾 DETAIL PAKET</b>',
-        '━━━━━━━━━━',
-        f"<b>{escape(item['name'])}</b>",
-        f"<i>{escape(item['category_title'])}</i>",
+    summary_box = make_text_box([
+        item['name'],
         '',
-        f"• Durasi: {escape(item['duration'])}",
-        f"• Harga: <b>{escape(item['price'])}</b>",
-        f"• Kode paket: <code>{escape(item['id'].upper())}</code>",
-        '',
-    ]
+        f"Kategori : {item['category_title']}",
+        f"Durasi   : {item['duration']}",
+        f"Harga    : {item['price']}",
+        f"Kode     : {item['id'].upper()}",
+    ], title='Detail Paket')
 
-    lines.extend(format_notes('✅ Highlight / Benefit', item['notes']))
-    lines.extend(format_notes('ℹ️ Catatan kategori', category_notes))
-    lines.append('<i>Kalau sudah cocok, tekan tombol order di bawah ya.</i>')
+    lines = [f"<code>{escape(summary_box)}</code>", '']
+
+    if item['notes']:
+        benefit_box = make_text_box([f"• {note}" for note in item['notes']], title='Highlight')
+        lines.append(f"<code>{escape(benefit_box)}</code>")
+        lines.append('')
+
+    if category_notes:
+        note_box = make_text_box([f"• {note}" for note in category_notes], title='Catatan')
+        lines.append(f"<code>{escape(note_box)}</code>")
+        lines.append('')
+
+    lines.append('<i>Tekan tombol order untuk mengirim format chat WhatsApp ke admin.</i>')
     return '\n'.join(lines).strip()
 
 
 def fallback_text() -> str:
     return (
-        f"<b>✨ {escape(STORE_NAME.upper())}</b>\n\n"
-        'Aku belum paham maksud chat kamu.\n'
-        'Biar gampang, lanjut pilih dari menu utama aja ya.'
+        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
+        'Silakan mulai dari menu utama ya bre.\n'
+        'Pilih kategori produk yang ingin kamu lihat di bawah ini.'
     )
 
 
 def idle_reset_text() -> str:
     minutes = max(IDLE_RESET_SECONDS // 60, 1)
     return (
-        '<b>🔄 Sesi di-reset otomatis</b>\n\n'
-        f'Karena chat sempat tidak aktif sekitar {minutes} menit, bot balik ke menu utama biar alurnya rapi lagi.'
+        '<b>🔄 Sesi di-reset otomatis</b>\n'
+        '━━━━━━━━━━━━\n\n'
+        f'Chat sempat tidak aktif sekitar {minutes} menit, jadi bot balik ke menu utama dulu ya bre.'
     )
 
 
@@ -505,6 +548,18 @@ def match_item_by_text(text: str) -> str | None:
             if alias and matches_alias(normalized, alias):
                 return item_id
     return None
+
+
+# =========================================================
+# SEND / EDIT HELPERS
+# =========================================================
+
+def wants_main_menu_reset(text: str) -> bool:
+    normalized = normalize_text(text)
+    return normalized in {'start', 'menu'} or any(
+        matches_alias(normalized, greeting)
+        for greeting in ('halo', 'hai', 'hi', 'assalamualaikum')
+    )
 
 
 async def reply_html(message, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
@@ -549,6 +604,10 @@ async def edit_or_reply(query, text: str, reply_markup: InlineKeyboardMarkup | N
         raise
 
 
+# =========================================================
+# HANDLERS
+# =========================================================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         await send_main_menu(update.message, context)
@@ -575,17 +634,17 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not message or not message.text:
         return
 
-    if is_chat_idle(context, message.chat_id):
+    normalized = normalize_text(message.text)
+
+    if is_chat_idle(context, message.chat_id) and not wants_main_menu_reset(message.text):
         await reply_html(message, idle_reset_text(), main_menu_keyboard())
         return
-
-    normalized = normalize_text(message.text)
 
     if not normalized:
         await reply_html(message, fallback_text(), main_menu_keyboard())
         return
 
-    if normalized in {'start', 'menu'} or any(matches_alias(normalized, greeting) for greeting in ('halo', 'hai', 'hi', 'assalamualaikum')):
+    if wants_main_menu_reset(message.text):
         await send_main_menu(message, context)
         return
 
@@ -594,6 +653,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if matches_alias(normalized, 'netflix') and not matches_alias(normalized, 'harian') and not matches_alias(normalized, 'bulanan'):
+        touch_chat(context, message.chat_id)
         await reply_html(message, netflix_prompt_text(), netflix_choice_keyboard())
         return
 
@@ -607,6 +667,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_category(message, category_key, context)
         return
 
+    touch_chat(context, message.chat_id)
     await reply_html(message, fallback_text(), main_menu_keyboard())
 
 
@@ -614,7 +675,7 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if update.message:
         touch_chat(context, update.message.chat_id)
         await update.message.reply_text(
-            text='Perintah belum tersedia. Pakai menu yang ada di bawah ya.',
+            text='Perintah belum tersedia. Gunakan menu di bawah ya.',
             reply_markup=main_menu_keyboard(),
         )
 
@@ -648,7 +709,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if data == 'bantuan':
-        await query.answer('Membuka cara order...')
+        await query.answer('Membuka info order...')
         await edit_or_reply(query, help_text(), main_menu_keyboard())
         return
 
@@ -678,11 +739,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.exception('Unhandled error while processing update', exc_info=context.error)
 
-    # Hindari spam pesan error berulang pada callback query.
     if isinstance(update, Update) and update.message:
         with suppress(Exception):
             await update.message.reply_text(
-                text='Maaf, bot lagi gangguan sebentar. Coba ulang lagi ya.',
+                text='Maaf, bot sedang mengalami gangguan sementara. Silakan coba lagi sebentar ya.',
                 reply_markup=main_menu_keyboard(),
             )
 
