@@ -9,14 +9,13 @@ from pathlib import Path
 from urllib.parse import quote
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatAction
 from telegram.error import BadRequest
 from telegram.ext import (
     Application,
     ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
-    ContextTypes,
     MessageHandler,
     filters,
 )
@@ -61,6 +60,7 @@ def get_int_env(name: str, default: int) -> int:
             default,
         )
         return default
+
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WA_NUMBER = os.getenv("WA_NUMBER", "6285126019233").strip()
@@ -218,7 +218,6 @@ BOT_COMMANDS = [
     ("start", "Buka menu utama"),
     ("menu", "Tampilkan menu"),
     ("produk", "Lihat katalog produk"),
-    ("admin", "Chat admin WhatsApp"),
     ("help", "Cara pakai bot"),
 ]
 
@@ -304,7 +303,7 @@ def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[I
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🛍️ Buka Katalog", callback_data="lihat_kategori")],
+            [InlineKeyboardButton("🛍️ Lihat Katalog", callback_data="lihat_kategori")],
             [InlineKeyboardButton("📌 Info Order", callback_data="bantuan")],
         ]
     )
@@ -362,15 +361,16 @@ def welcome_text() -> str:
         "Mau cari <b>app premium murah dan bergaransi</b>?\n"
         "Disini saja bre, untuk product sebenernya masih banyak, "
         "cuma sayanya lagi cape segini dulu aja ya.\n\n"
-        "Kalau ada yang mau ditanyakan, <b>sung DM aja ya bre</b>."
+        "Kalau ada yang mau ditanyakan, <b>sung dm aja ya bre</b>."
     )
 
 
 def catalog_intro_text() -> str:
     return (
-        "<b>🛍️ Katalog Produk</b>\n"
-        "<i>Pilih kategori yang ingin kamu lihat.</i>\n\n"
-        f"Tersedia <b>{len(PRODUCTS)}</b> kategori aktif dan <b>{total_item_count()}</b> paket siap ditampilkan."
+        "<b>🛍️ Katalog Produk</b>\n\n"
+        "Sok dipilih dulu aja ya,\n"
+        "kalo udah nemu product yang ingin dibeli,\n"
+        "nanti langsung diarahin sama si bot nya ke WA saya ya bre."
     )
 
 
@@ -380,14 +380,6 @@ def help_text() -> str:
         "Sok dipilih dulu aja ya.\n"
         "Kalau udah nemu product yang ingin dibeli,\n"
         "nanti langsung diarahin sama si bot nya ke WA saya ya bre."
-    )
-
-
-def admin_text() -> str:
-    return (
-        "<b>💬 Hubungi Admin</b>\n\n"
-        "Kalau kamu sudah tahu paket yang mau dibeli, sebaiknya masuk lewat detail produk agar format order lebih rapi.\n\n"
-        "Kalau masih mau tanya stok, garansi, atau proses order, kamu juga bisa langsung chat admin dari tombol di bawah."
     )
 
 
@@ -449,17 +441,15 @@ def format_item_text(item_id: str) -> str:
 
     lines.extend(format_notes("✅ Benefit / Keterangan paket", item["notes"]))
     lines.extend(format_notes("ℹ️ Catatan kategori", category_notes))
-    lines.append("<i>Tekan tombol order untuk mengirim format chat WhatsApp yang lebih rapi ke admin.</i>")
+    lines.append("<i>Tekan tombol order untuk mengirim format chat WhatsApp ke admin.</i>")
     return "\n".join(lines).strip()
 
 
 def fallback_text() -> str:
     return (
-        "<b>Pesanmu sudah masuk.</b>\n\n"
-        "Supaya lebih cepat, kamu bisa pilih salah satu alur berikut:\n"
-        "• buka katalog produk\n"
-        "• langsung chat admin\n"
-        "• ketik nama produk, misalnya <code>ChatGPT</code> atau <code>Netflix</code>"
+        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
+        "Silakan mulai dari menu utama ya bre.\n"
+        "Pilih kategori produk yang ingin kamu lihat di bawah ini."
     )
 
 
@@ -481,7 +471,8 @@ def match_item_by_text(text: str) -> str | None:
     return None
 
 
-async def send_main_menu(message) -> None:
+async def send_main_menu(message, context) -> None:
+    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
     await message.reply_text(
         text=welcome_text(),
         reply_markup=main_menu_keyboard(),
@@ -489,7 +480,8 @@ async def send_main_menu(message) -> None:
     )
 
 
-async def send_catalog(message) -> None:
+async def send_catalog(message, context) -> None:
+    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
     await message.reply_text(
         text=catalog_intro_text(),
         reply_markup=category_menu_keyboard(),
@@ -497,20 +489,8 @@ async def send_catalog(message) -> None:
     )
 
 
-async def send_admin(message) -> None:
-    await message.reply_text(
-        text=admin_text(),
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("💬 Chat Admin", url=build_admin_url())],
-                [InlineKeyboardButton("🛍️ Buka Katalog", callback_data="lihat_kategori")],
-            ]
-        ),
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def send_category(message, category_key: str) -> None:
+async def send_category(message, category_key: str, context) -> None:
+    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
     await message.reply_text(
         text=format_category_text(category_key),
         reply_markup=item_menu_keyboard(category_key),
@@ -518,7 +498,8 @@ async def send_category(message, category_key: str) -> None:
     )
 
 
-async def send_item(message, item_id: str) -> None:
+async def send_item(message, item_id: str, context) -> None:
+    await context.bot.send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
     await message.reply_text(
         text=format_item_text(item_id),
         reply_markup=order_keyboard(item_id),
@@ -548,17 +529,17 @@ async def edit_or_reply(query, text: str, reply_markup: InlineKeyboardMarkup | N
         raise
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Update, context) -> None:
     if update.message:
-        await send_main_menu(update.message)
+        await send_main_menu(update.message, context)
 
 
-async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def menu_command(update: Update, context) -> None:
     if update.message:
-        await send_main_menu(update.message)
+        await send_main_menu(update.message, context)
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def help_command(update: Update, context) -> None:
     if update.message:
         await update.message.reply_text(
             text=help_text(),
@@ -567,17 +548,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
 
-async def produk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def produk_command(update: Update, context) -> None:
     if update.message:
-        await send_catalog(update.message)
+        await send_catalog(update.message, context)
 
 
-async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message:
-        await send_admin(update.message)
-
-
-async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def text_router(update: Update, context) -> None:
     message = update.message
     if not message or not message.text:
         return
@@ -593,11 +569,11 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if normalized in {"start", "menu"} or any(matches_alias(normalized, greeting) for greeting in ("halo", "hai", "hi", "assalamualaikum")):
-        await send_main_menu(message)
+        await send_main_menu(message, context)
         return
 
     if any(matches_alias(normalized, keyword) for keyword in ("produk", "katalog", "catalog", "daftar", "list")):
-        await send_catalog(message)
+        await send_catalog(message, context)
         return
 
     if matches_alias(normalized, "netflix") and not matches_alias(normalized, "harian") and not matches_alias(normalized, "bulanan"):
@@ -610,16 +586,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     item_id = match_item_by_text(normalized)
     if item_id:
-        await send_item(message, item_id)
+        await send_item(message, item_id, context)
         return
 
     category_key = match_category_by_text(normalized)
     if category_key:
-        await send_category(message, category_key)
-        return
-
-    if any(matches_alias(normalized, keyword) for keyword in ("admin", "wa", "whatsapp", "order", "beli", "pesan")):
-        await send_admin(message)
+        await send_category(message, category_key, context)
         return
 
     await message.reply_text(
@@ -629,7 +601,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     )
 
 
-async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def unknown_command(update: Update, context) -> None:
     if update.message:
         await update.message.reply_text(
             text="Perintah belum tersedia. Gunakan menu di bawah ya.",
@@ -637,7 +609,7 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
 
 
-async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def callback_handler(update: Update, context) -> None:
     query = update.callback_query
     if not query:
         return
@@ -645,7 +617,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     data = query.data or ""
 
     if data == "menu":
-        await query.answer("Membuka menu utama...")
+        await query.answer("Membuka menu...")
         await edit_or_reply(query, welcome_text(), main_menu_keyboard())
         return
 
@@ -655,7 +627,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if data == "bantuan":
-        await query.answer("Membuka bantuan...")
+        await query.answer("Membuka info order...")
         await edit_or_reply(query, help_text(), main_menu_keyboard())
         return
 
@@ -665,8 +637,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer("Kategori tidak ditemukan.", show_alert=True)
             return
 
-        await query.answer("Kategori dibuka.")
-        await edit_or_reply(query, format_category_text(category_key), item_menu_keyboard(category_key))
+        await query.answer("Membuka kategori...")
+        await edit_or_reply(
+            query,
+            format_category_text(category_key),
+            item_menu_keyboard(category_key),
+        )
         return
 
     if data.startswith("item_"):
@@ -675,14 +651,18 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer("Paket tidak ditemukan.", show_alert=True)
             return
 
-        await query.answer("Detail paket siap.")
-        await edit_or_reply(query, format_item_text(item_id), order_keyboard(item_id))
+        await query.answer("Menyiapkan detail paket...")
+        await edit_or_reply(
+            query,
+            format_item_text(item_id),
+            order_keyboard(item_id),
+        )
         return
 
     await query.answer("Aksi tidak dikenali.", show_alert=True)
 
 
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def error_handler(update: object, context) -> None:
     logger.exception("Unhandled error while processing update", exc_info=context.error)
 
     if isinstance(update, Update) and update.effective_message:
@@ -706,7 +686,6 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("produk", produk_command))
-    app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
@@ -719,16 +698,16 @@ def build_application() -> Application:
         .token(BOT_TOKEN)
         .http_version("1.1")
         .get_updates_http_version("1.1")
-        .concurrent_updates(8)
-        .connection_pool_size(16)
-        .pool_timeout(30)
-        .connect_timeout(30)
-        .read_timeout(30)
-        .write_timeout(30)
-        .get_updates_connect_timeout(30)
-        .get_updates_read_timeout(30)
-        .get_updates_write_timeout(30)
-        .get_updates_pool_timeout(30)
+        .concurrent_updates(32)
+        .connection_pool_size(64)
+        .pool_timeout(10)
+        .connect_timeout(10)
+        .read_timeout(10)
+        .write_timeout(10)
+        .get_updates_connect_timeout(10)
+        .get_updates_read_timeout(10)
+        .get_updates_write_timeout(10)
+        .get_updates_pool_timeout(10)
         .post_init(post_init)
         .build()
     )
@@ -739,9 +718,9 @@ def run_bot() -> None:
     register_handlers(app)
     app.run_polling(
         poll_interval=0.0,
-        timeout=30,
+        timeout=10,
         bootstrap_retries=-1,
-        drop_pending_updates=False,
+        drop_pending_updates=True,
     )
 
 
