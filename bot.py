@@ -302,17 +302,10 @@ def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[I
 
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
-    admin_prompt = f"Halo Admin {STORE_NAME}, saya ingin tanya stok dan katalog terbaru."
     return InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton("🛍️ Katalog Produk", callback_data="lihat_kategori"),
-                InlineKeyboardButton("⚡ Order Cepat", url=build_admin_url(admin_prompt)),
-            ],
-            [
-                InlineKeyboardButton("💬 Chat Admin", url=build_admin_url()),
-                InlineKeyboardButton("❓ Cara Order", callback_data="bantuan"),
-            ],
+            [InlineKeyboardButton("🛍️ Buka Katalog", callback_data="lihat_kategori")],
+            [InlineKeyboardButton("📌 Info Order", callback_data="bantuan")],
         ]
     )
 
@@ -356,11 +349,8 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("✅ Kirim Order ke WhatsApp", url=build_admin_url(build_order_message(item_id)))],
-            [
-                InlineKeyboardButton("💬 Chat Admin", url=build_admin_url()),
-                InlineKeyboardButton("⬅️ Kembali", callback_data=f"cat_{item['category_key']}"),
-            ],
+            [InlineKeyboardButton("✅ Order via WhatsApp", url=build_admin_url(build_order_message(item_id)))],
+            [InlineKeyboardButton("⬅️ Kembali", callback_data=f"cat_{item['category_key']}")],
             [InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")],
         ]
     )
@@ -368,15 +358,11 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 def welcome_text() -> str:
     return (
-        f"<b>✨ {escape(STORE_NAME.upper())} ✨</b>\n"
-        "<i>Premium store untuk akun digital favorit kamu.</i>\n\n"
-        "Mau cari paket yang rapi, cepat, dan langsung bisa lanjut order?\n"
-        "Tinggal pilih kategori, buka detail paket, lalu kirim format order otomatis ke admin.\n\n"
-        "<b>Yang bisa kamu lakukan di sini:</b>\n"
-        "• lihat katalog per kategori\n"
-        "• cek detail paket dan harga\n"
-        "• kirim template order WhatsApp yang lebih rapi\n"
-        "• langsung chat admin kapan saja"
+        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
+        "Mau cari <b>app premium murah dan bergaransi</b>?\n"
+        "Disini saja bre, untuk product sebenernya masih banyak, "
+        "cuma sayanya lagi cape segini dulu aja ya.\n\n"
+        "Kalau ada yang mau ditanyakan, <b>sung DM aja ya bre</b>."
     )
 
 
@@ -390,19 +376,10 @@ def catalog_intro_text() -> str:
 
 def help_text() -> str:
     return (
-        "<b>❓ Cara Order di Bot</b>\n\n"
-        "1. Buka katalog produk\n"
-        "2. Pilih kategori yang kamu butuhkan\n"
-        "3. Tap paket untuk lihat detail\n"
-        "4. Tekan tombol order ke WhatsApp\n"
-        "5. Lanjutkan konfirmasi stok dan pembayaran dengan admin\n\n"
-        "<b>Perintah cepat:</b>\n"
-        "/start - menu utama\n"
-        "/menu - tampilkan menu\n"
-        "/produk - buka katalog\n"
-        "/admin - langsung ke admin\n"
-        "/help - bantuan\n\n"
-        "<i>Kamu juga bisa ketik nama produk seperti Canva, ChatGPT, Netflix, atau Apple Music.</i>"
+        "<b>📌 INFO ORDER</b>\n\n"
+        "Sok dipilih dulu aja ya.\n"
+        "Kalau udah nemu product yang ingin dibeli,\n"
+        "nanti langsung diarahin sama si bot nya ke WA saya ya bre."
     )
 
 
