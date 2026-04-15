@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from contextlib import suppress
 from html import escape
 from urllib.parse import quote
 
@@ -9,10 +11,13 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
+    Application,
     ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 # =========================================================
@@ -21,6 +26,15 @@ from telegram.ext import (
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WA_NUMBER = os.getenv("WA_NUMBER", "6285126019233").strip()
 STORE_NAME = os.getenv("STORE_NAME", "reiizam store").strip()
+HEALTHCHECK_PATH = os.getenv("HEALTHCHECK_PATH", "/health").strip() or "/health"
+
+if not HEALTHCHECK_PATH.startswith("/"):
+    HEALTHCHECK_PATH = f"/{HEALTHCHECK_PATH}"
+
+try:
+    PORT = int((os.getenv("PORT", "0") or "0").strip())
+except ValueError:
+    PORT = 0
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -35,6 +49,7 @@ PRODUCTS = {
     "canva": {
         "title": "Canva",
         "icon": "🎨",
+        "description": "Paket desain untuk kebutuhan konten, branding, dan editing harian.",
         "items": [
             {"id": "canva_01", "name": "Member Pro", "duration": "1 bulan", "price": "Rp5.000", "notes": []},
             {"id": "canva_02", "name": "Member Pro", "duration": "2 bulan", "price": "Rp10.000", "notes": []},
@@ -45,6 +60,7 @@ PRODUCTS = {
     "chatgpt": {
         "title": "ChatGPT",
         "icon": "🤖",
+        "description": "Pilihan paket AI premium untuk kebutuhan chat, ide, dan produktivitas.",
         "items": [
             {
                 "id": "chatgpt_01",
@@ -78,6 +94,7 @@ PRODUCTS = {
     "youtube": {
         "title": "YouTube",
         "icon": "▶️",
+        "description": "Paket YouTube premium untuk nonton tanpa iklan dengan harga ringan.",
         "items": [
             {"id": "youtube_01", "name": "Famplan (Invite)", "duration": "1 bulan", "price": "Rp4.000", "notes": []},
             {"id": "youtube_02", "name": "Indplan", "duration": "1 bulan", "price": "Rp7.000", "notes": []},
@@ -88,6 +105,7 @@ PRODUCTS = {
     "netflix_harian": {
         "title": "Netflix Harian",
         "icon": "📺",
+        "description": "Pilihan harian untuk kebutuhan nonton cepat dan fleksibel.",
         "items": [
             {"id": "neth_01", "name": "1 Hari 2 User", "duration": "1 hari", "price": "Rp3.000", "notes": []},
             {"id": "neth_02", "name": "1 Hari 1 User", "duration": "1 hari", "price": "Rp5.000", "notes": []},
@@ -100,6 +118,7 @@ PRODUCTS = {
     "netflix_bulanan": {
         "title": "Netflix Bulanan",
         "icon": "🎬",
+        "description": "Paket bulanan buat yang ingin pengalaman nonton lebih nyaman.",
         "items": [
             {
                 "id": "netb_01",
@@ -126,6 +145,7 @@ PRODUCTS = {
     "apple_music": {
         "title": "Apple Music",
         "icon": "🎵",
+        "description": "Paket musik premium untuk pengalaman dengar yang lebih nyaman.",
         "items": [
             {"id": "apple_01", "name": "Famplan", "duration": "1 bulan", "price": "Rp10.000", "notes": []},
             {"id": "apple_02", "name": "Indplan", "duration": "1 bulan", "price": "Rp12.000", "notes": []},
@@ -142,6 +162,7 @@ PRODUCTS = {
     "alight_motion": {
         "title": "Alight Motion",
         "icon": "✨",
+        "description": "Paket editing motion untuk kebutuhan konten dan video kreatif.",
         "items": [
             {"id": "alight_01", "name": "Private - Akun Seller", "duration": "1 tahun", "price": "Rp10.000", "notes": []},
             {"id": "alight_02", "name": "Private - Akun Buyer", "duration": "1 tahun", "price": "Rp15.000", "notes": ["Proses slow"]},
@@ -151,6 +172,7 @@ PRODUCTS = {
     "wink": {
         "title": "Wink",
         "icon": "💖",
+        "description": "Pilihan paket Wink dengan opsi sharing, private, dan jaspay.",
         "items": [
             {"id": "wink_01", "name": "Haring", "duration": "7 hari", "price": "Rp8.000", "notes": []},
             {"id": "wink_02", "name": "Haring", "duration": "1 bulan", "price": "Rp30.000", "notes": []},
@@ -161,52 +183,258 @@ PRODUCTS = {
     },
 }
 
+BOT_COMMANDS = [
+    ("start", "Buka menu utama"),
+    ("menu", "Tampilkan menu"),
+    ("produk", "Lihat katalog produk"),
+    ("admin", "Chat admin WhatsApp"),
+    ("help", "Cara pakai bot"),
+]
+
+CATEGORY_ALIASES = {
+    "canva": ["canva"],
+    "chatgpt": ["chatgpt", "chat gpt", "gpt", "openai"],
+    "youtube": ["youtube", "youtube premium", "yt"],
+    "netflix_harian": ["netflix harian", "netflix daily", "harian netflix"],
+    "netflix_bulanan": ["netflix bulanan", "netflix monthly", "bulanan netflix"],
+    "apple_music": ["apple music", "music apple"],
+    "alight_motion": ["alight motion", "alight"],
+    "wink": ["wink"],
+}
+
+GENERIC_ITEM_ALIASES = {
+    "owner",
+    "member pro",
+    "private",
+    "head",
+    "famplan",
+    "indplan",
+}
+
+
+def normalize_text(text: str) -> str:
+    return " ".join("".join(ch.lower() if ch.isalnum() else " " for ch in text).split())
+
+
+def matches_alias(normalized_text: str, alias: str) -> bool:
+    alias = normalize_text(alias)
+    if not alias:
+        return False
+    if " " in alias:
+        return alias in normalized_text
+    return alias in normalized_text.split()
+
+
 ITEM_LOOKUP = {}
+ITEM_ALIASES = {}
+
 for category_key, category_data in PRODUCTS.items():
     for item in category_data["items"]:
-        ITEM_LOOKUP[item["id"]] = {
+        item_data = {
             "category_key": category_key,
             "category_title": category_data["title"],
             "category_icon": category_data["icon"],
             **item,
         }
+        ITEM_LOOKUP[item["id"]] = item_data
+        aliases = {
+            normalize_text(item["id"]),
+            normalize_text(f"{category_data['title']} {item['name']}"),
+        }
+        plain_name = normalize_text(item["name"])
+        if plain_name not in GENERIC_ITEM_ALIASES:
+            aliases.add(plain_name)
+        ITEM_ALIASES[item["id"]] = aliases
+
+
+def total_item_count() -> int:
+    return sum(len(category["items"]) for category in PRODUCTS.values())
+
+
+def build_admin_url(message: str | None = None) -> str:
+    if not message:
+        return f"https://wa.me/{WA_NUMBER}"
+    return f"https://wa.me/{WA_NUMBER}?text={quote(message)}"
+
+
+def build_order_message(item_id: str) -> str:
+    item = ITEM_LOOKUP[item_id]
+    return "\n".join(
+        [
+            f"Halo Admin {STORE_NAME}, saya ingin order paket berikut.",
+            "",
+            "*RINGKASAN PESANAN*",
+            f"- Kode Paket: {item['id'].upper()}",
+            f"- Kategori: {item['category_title']}",
+            f"- Paket: {item['name']}",
+            f"- Durasi: {item['duration']}",
+            f"- Harga: {item['price']}",
+            "",
+            "*Mohon dibantu info:*",
+            "- stok saat ini",
+            "- metode pembayaran",
+            "- estimasi proses",
+            "",
+            "Terima kasih.",
+        ]
+    )
+
+
+def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[InlineKeyboardButton]]:
+    return [buttons[index:index + size] for index in range(0, len(buttons), size)]
+
+
+def main_menu_keyboard() -> InlineKeyboardMarkup:
+    admin_prompt = f"Halo Admin {STORE_NAME}, saya ingin tanya stok dan katalog terbaru."
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("🛍️ Katalog Produk", callback_data="lihat_kategori"),
+                InlineKeyboardButton("⚡ Order Cepat", url=build_admin_url(admin_prompt)),
+            ],
+            [
+                InlineKeyboardButton("💬 Chat Admin", url=build_admin_url()),
+                InlineKeyboardButton("❓ Cara Order", callback_data="bantuan"),
+            ],
+        ]
+    )
+
+
+def category_menu_keyboard() -> InlineKeyboardMarkup:
+    category_buttons = [
+        InlineKeyboardButton(f"{data['icon']} {data['title']}", callback_data=f"cat_{key}")
+        for key, data in PRODUCTS.items()
+    ]
+    rows = chunk_buttons(category_buttons, 2)
+    rows.append([InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def netflix_choice_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("📺 Netflix Harian", callback_data="cat_netflix_harian"),
+                InlineKeyboardButton("🎬 Netflix Bulanan", callback_data="cat_netflix_bulanan"),
+            ],
+            [InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")],
+        ]
+    )
+
+
+def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
+    rows = []
+    for item in PRODUCTS[category_key]["items"]:
+        label = f"{item['name']} | {item['price']}"
+        if len(label) > 38:
+            label = f"{item['duration']} | {item['price']}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"item_{item['id']}")])
+
+    rows.append([InlineKeyboardButton("⬅️ Kembali ke Kategori", callback_data="lihat_kategori")])
+    rows.append([InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
+    item = ITEM_LOOKUP[item_id]
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("✅ Kirim Order ke WhatsApp", url=build_admin_url(build_order_message(item_id)))],
+            [
+                InlineKeyboardButton("💬 Chat Admin", url=build_admin_url()),
+                InlineKeyboardButton("⬅️ Kembali", callback_data=f"cat_{item['category_key']}"),
+            ],
+            [InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")],
+        ]
+    )
 
 
 def welcome_text() -> str:
     return (
-        f"<b>✨ Selamat datang di {escape(STORE_NAME)} ✨</b>\n\n"
-        "Bot ini menampilkan katalog produk premium dengan tampilan yang rapi.\n"
-        "Pilih kategori, lihat detail paket, lalu lanjut order otomatis ke WhatsApp admin."
+        f"<b>✨ {escape(STORE_NAME.upper())} ✨</b>\n"
+        "<i>Premium store untuk akun digital favorit kamu.</i>\n\n"
+        "Mau cari paket yang rapi, cepat, dan langsung bisa lanjut order?\n"
+        "Tinggal pilih kategori, buka detail paket, lalu kirim format order otomatis ke admin.\n\n"
+        "<b>Yang bisa kamu lakukan di sini:</b>\n"
+        "• lihat katalog per kategori\n"
+        "• cek detail paket dan harga\n"
+        "• kirim template order WhatsApp yang lebih rapi\n"
+        "• langsung chat admin kapan saja"
+    )
+
+
+def catalog_intro_text() -> str:
+    return (
+        "<b>🛍️ Katalog Produk</b>\n"
+        "<i>Pilih kategori yang ingin kamu lihat.</i>\n\n"
+        f"Tersedia <b>{len(PRODUCTS)}</b> kategori aktif dan <b>{total_item_count()}</b> paket siap ditampilkan."
     )
 
 
 def help_text() -> str:
     return (
-        "<b>Perintah bot:</b>\n"
-        "/start - buka menu utama\n"
-        "/produk - lihat kategori produk\n"
-        "/admin - buka WhatsApp admin\n"
-        "/help - bantuan"
+        "<b>❓ Cara Order di Bot</b>\n\n"
+        "1. Buka katalog produk\n"
+        "2. Pilih kategori yang kamu butuhkan\n"
+        "3. Tap paket untuk lihat detail\n"
+        "4. Tekan tombol order ke WhatsApp\n"
+        "5. Lanjutkan konfirmasi stok dan pembayaran dengan admin\n\n"
+        "<b>Perintah cepat:</b>\n"
+        "/start - menu utama\n"
+        "/menu - tampilkan menu\n"
+        "/produk - buka katalog\n"
+        "/admin - langsung ke admin\n"
+        "/help - bantuan\n\n"
+        "<i>Kamu juga bisa ketik nama produk seperti Canva, ChatGPT, Netflix, atau Apple Music.</i>"
     )
+
+
+def admin_text() -> str:
+    return (
+        "<b>💬 Hubungi Admin</b>\n\n"
+        "Kalau kamu sudah tahu paket yang mau dibeli, sebaiknya masuk lewat detail produk agar format order lebih rapi.\n\n"
+        "Kalau masih mau tanya stok, garansi, atau proses order, kamu juga bisa langsung chat admin dari tombol di bawah."
+    )
+
+
+def netflix_prompt_text() -> str:
+    return (
+        "<b>📺 Netflix tersedia dalam dua pilihan</b>\n\n"
+        "Pilih versi yang mau kamu lihat dulu:\n"
+        "• Harian\n"
+        "• Bulanan"
+    )
+
+
+def format_notes(title: str, notes: list[str]) -> list[str]:
+    if not notes:
+        return []
+
+    lines = [f"<b>{escape(title)}</b>"]
+    for note in notes:
+        lines.append(f"• {escape(note)}")
+    lines.append("")
+    return lines
 
 
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-    lines = [f"<b>{escape(data['icon'])} {escape(data['title'].upper())}</b>", ""]
+    lines = [
+        f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
+        f"<i>{escape(data['description'])}</i>",
+        "",
+    ]
 
-    for idx, item in enumerate(data["items"], start=1):
-        lines.append(f"<b>{idx}. {escape(item['name'])}</b>")
-        lines.append(f"└ Durasi: {escape(item['duration'])}")
-        lines.append(f"└ Harga: <b>{escape(item['price'])}</b>")
+    for index, item in enumerate(data["items"], start=1):
+        lines.append(f"<b>{index}. {escape(item['name'])}</b>")
+        lines.append(f"• Durasi: {escape(item['duration'])}")
+        lines.append(f"• Harga: <b>{escape(item['price'])}</b>")
+        if item["notes"]:
+            lines.append(f"• Highlight: {escape(item['notes'][0])}")
         lines.append("")
 
-    if data["category_notes"]:
-        lines.append("<b>ℹ️ Note kategori:</b>")
-        for note in data["category_notes"]:
-            lines.append(f"• {escape(note)}")
-        lines.append("")
-
-    lines.append("<i>Silakan pilih paket di tombol bawah.</i>")
+    lines.extend(format_notes("ℹ️ Catatan kategori", data["category_notes"]))
+    lines.append("<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>")
     return "\n".join(lines).strip()
 
 
@@ -215,178 +443,340 @@ def format_item_text(item_id: str) -> str:
     category_notes = PRODUCTS[item["category_key"]]["category_notes"]
 
     lines = [
-        "<b>🛍 Detail Produk</b>",
+        "<b>🧾 Detail Paket</b>",
+        f"<b>{escape(item['name'])}</b>",
         "",
-        f"<b>Kategori:</b> {escape(item['category_title'])}",
-        f"<b>Paket:</b> {escape(item['name'])}",
-        f"<b>Durasi:</b> {escape(item['duration'])}",
-        f"<b>Harga:</b> {escape(item['price'])}",
-        ""
+        f"• Kategori: {escape(item['category_title'])}",
+        f"• Durasi: {escape(item['duration'])}",
+        f"• Harga: <b>{escape(item['price'])}</b>",
+        f"• Kode paket: <code>{escape(item['id'].upper())}</code>",
+        "",
     ]
 
-    if item["notes"]:
-        lines.append("<b>✅ Benefit / Keterangan paket:</b>")
-        for note in item["notes"]:
-            lines.append(f"• {escape(note)}")
-        lines.append("")
-
-    if category_notes:
-        lines.append("<b>ℹ️ Note kategori:</b>")
-        for note in category_notes:
-            lines.append(f"• {escape(note)}")
-        lines.append("")
-
-    lines.append("<i>Klik tombol di bawah untuk order via WhatsApp.</i>")
+    lines.extend(format_notes("✅ Benefit / Keterangan paket", item["notes"]))
+    lines.extend(format_notes("ℹ️ Catatan kategori", category_notes))
+    lines.append("<i>Tekan tombol order untuk mengirim format chat WhatsApp yang lebih rapi ke admin.</i>")
     return "\n".join(lines).strip()
 
 
-def main_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📦 Lihat Produk", callback_data="lihat_kategori")],
-        [InlineKeyboardButton("📞 Hubungi Admin", url=f"https://wa.me/{WA_NUMBER}")],
-        [InlineKeyboardButton("ℹ️ Bantuan", callback_data="bantuan")],
-    ])
-
-
-def category_menu_keyboard() -> InlineKeyboardMarkup:
-    buttons = []
-    for key, data in PRODUCTS.items():
-        buttons.append([InlineKeyboardButton(f"{data['icon']} {data['title']}", callback_data=f"cat_{key}")])
-    buttons.append([InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")])
-    return InlineKeyboardMarkup(buttons)
-
-
-def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
-    buttons = []
-    for item in PRODUCTS[category_key]["items"]:
-        label = f"{item['name']} • {item['price']}"
-        if len(label) > 36:
-            label = f"{item['duration']} • {item['price']}"
-        buttons.append([InlineKeyboardButton(label, callback_data=f"item_{item['id']}")])
-
-    buttons.append([InlineKeyboardButton("⬅️ Kembali ke Kategori", callback_data="lihat_kategori")])
-    buttons.append([InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")])
-    return InlineKeyboardMarkup(buttons)
-
-
-def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
-    item = ITEM_LOOKUP[item_id]
-    wa_text = (
-        "Halo admin, saya ingin order.\n\n"
-        f"Store: {STORE_NAME}\n"
-        f"Produk: {item['category_title']} - {item['name']}\n"
-        f"Durasi: {item['duration']}\n"
-        f"Harga: {item['price']}\n\n"
-        "Mohon info stok dan proses ordernya ya."
+def fallback_text() -> str:
+    return (
+        "<b>Pesanmu sudah masuk.</b>\n\n"
+        "Supaya lebih cepat, kamu bisa pilih salah satu alur berikut:\n"
+        "• buka katalog produk\n"
+        "• langsung chat admin\n"
+        "• ketik nama produk, misalnya <code>ChatGPT</code> atau <code>Netflix</code>"
     )
-    wa_url = f"https://wa.me/{WA_NUMBER}?text={quote(wa_text)}"
-
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Order via WhatsApp", url=wa_url)],
-        [InlineKeyboardButton("⬅️ Kembali ke Produk", callback_data=f"cat_{item['category_key']}")],
-        [InlineKeyboardButton("🏠 Menu Utama", callback_data="menu")],
-    ])
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
+def match_category_by_text(text: str) -> str | None:
+    normalized = normalize_text(text)
+    for category_key, aliases in CATEGORY_ALIASES.items():
+        for alias in aliases:
+            if matches_alias(normalized, alias):
+                return category_key
+    return None
+
+
+def match_item_by_text(text: str) -> str | None:
+    normalized = normalize_text(text)
+    for item_id, aliases in ITEM_ALIASES.items():
+        for alias in aliases:
+            if alias and matches_alias(normalized, alias):
+                return item_id
+    return None
+
+
+async def send_main_menu(message) -> None:
+    await message.reply_text(
         text=welcome_text(),
         reply_markup=main_menu_keyboard(),
         parse_mode=ParseMode.HTML,
     )
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        text=help_text(),
-        reply_markup=main_menu_keyboard(),
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def produk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        text="<b>📂 Pilih kategori produk:</b>",
+async def send_catalog(message) -> None:
+    await message.reply_text(
+        text=catalog_intro_text(),
         reply_markup=category_menu_keyboard(),
         parse_mode=ParseMode.HTML,
     )
 
 
-async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        text="Klik tombol di bawah untuk langsung chat admin.",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📞 Chat Admin", url=f"https://wa.me/{WA_NUMBER}")],
-        ]),
+async def send_admin(message) -> None:
+    await message.reply_text(
+        text=admin_text(),
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("💬 Chat Admin", url=build_admin_url())],
+                [InlineKeyboardButton("🛍️ Buka Katalog", callback_data="lihat_kategori")],
+            ]
+        ),
+        parse_mode=ParseMode.HTML,
     )
+
+
+async def send_category(message, category_key: str) -> None:
+    await message.reply_text(
+        text=format_category_text(category_key),
+        reply_markup=item_menu_keyboard(category_key),
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def send_item(message, item_id: str) -> None:
+    await message.reply_text(
+        text=format_item_text(item_id),
+        reply_markup=order_keyboard(item_id),
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def edit_or_reply(query, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+    try:
+        await query.edit_message_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    except BadRequest as exc:
+        error_text = str(exc).lower()
+        if "message is not modified" in error_text:
+            return
+        if "message can't be edited" in error_text or "there is no text in the message to edit" in error_text:
+            if query.message:
+                await query.message.reply_text(
+                    text=text,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
+                )
+                return
+        raise
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await send_main_menu(update.message)
+
+
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await send_main_menu(update.message)
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await update.message.reply_text(
+            text=help_text(),
+            reply_markup=main_menu_keyboard(),
+            parse_mode=ParseMode.HTML,
+        )
+
+
+async def produk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await send_catalog(update.message)
+
+
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await send_admin(update.message)
+
+
+async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if not message or not message.text:
+        return
+
+    normalized = normalize_text(message.text)
+
+    if not normalized:
+        await message.reply_text(
+            text=fallback_text(),
+            reply_markup=main_menu_keyboard(),
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    if normalized in {"start", "menu"} or any(matches_alias(normalized, greeting) for greeting in ("halo", "hai", "hi", "assalamualaikum")):
+        await send_main_menu(message)
+        return
+
+    if any(matches_alias(normalized, keyword) for keyword in ("produk", "katalog", "catalog", "daftar", "list")):
+        await send_catalog(message)
+        return
+
+    if matches_alias(normalized, "netflix") and not matches_alias(normalized, "harian") and not matches_alias(normalized, "bulanan"):
+        await message.reply_text(
+            text=netflix_prompt_text(),
+            reply_markup=netflix_choice_keyboard(),
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    item_id = match_item_by_text(normalized)
+    if item_id:
+        await send_item(message, item_id)
+        return
+
+    category_key = match_category_by_text(normalized)
+    if category_key:
+        await send_category(message, category_key)
+        return
+
+    if any(matches_alias(normalized, keyword) for keyword in ("admin", "wa", "whatsapp", "order", "beli", "pesan")):
+        await send_admin(message)
+        return
+
+    await message.reply_text(
+        text=fallback_text(),
+        reply_markup=main_menu_keyboard(),
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await update.message.reply_text(
+            text="Perintah belum tersedia. Gunakan menu di bawah ya.",
+            reply_markup=main_menu_keyboard(),
+        )
 
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
-    data = query.data
+    if not query:
+        return
+
+    data = query.data or ""
+
+    if data == "menu":
+        await query.answer("Membuka menu utama...")
+        await edit_or_reply(query, welcome_text(), main_menu_keyboard())
+        return
+
+    if data == "lihat_kategori":
+        await query.answer("Menampilkan katalog...")
+        await edit_or_reply(query, catalog_intro_text(), category_menu_keyboard())
+        return
+
+    if data == "bantuan":
+        await query.answer("Membuka bantuan...")
+        await edit_or_reply(query, help_text(), main_menu_keyboard())
+        return
+
+    if data.startswith("cat_"):
+        category_key = data.replace("cat_", "", 1)
+        if category_key not in PRODUCTS:
+            await query.answer("Kategori tidak ditemukan.", show_alert=True)
+            return
+
+        await query.answer("Kategori dibuka.")
+        await edit_or_reply(query, format_category_text(category_key), item_menu_keyboard(category_key))
+        return
+
+    if data.startswith("item_"):
+        item_id = data.replace("item_", "", 1)
+        if item_id not in ITEM_LOOKUP:
+            await query.answer("Paket tidak ditemukan.", show_alert=True)
+            return
+
+        await query.answer("Detail paket siap.")
+        await edit_or_reply(query, format_item_text(item_id), order_keyboard(item_id))
+        return
+
+    await query.answer("Aksi tidak dikenali.", show_alert=True)
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.exception("Unhandled error while processing update", exc_info=context.error)
+
+    if isinstance(update, Update) and update.effective_message:
+        with suppress(Exception):
+            await update.effective_message.reply_text(
+                text="Maaf, bot sedang mengalami gangguan sementara. Silakan coba lagi sebentar ya.",
+                reply_markup=main_menu_keyboard(),
+            )
+
+
+async def handle_healthcheck(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    status = "404 Not Found"
+    body = b"not found"
 
     try:
-        if data == "menu":
-            await query.edit_message_text(
-                text=welcome_text(),
-                reply_markup=main_menu_keyboard(),
-                parse_mode=ParseMode.HTML,
-            )
-            return
+        request = await asyncio.wait_for(reader.read(1024), timeout=5)
+        request_line = request.split(b"\r\n", 1)[0].decode("latin-1", "ignore")
+        parts = request_line.split()
+        method = parts[0] if len(parts) >= 1 else "GET"
+        path = parts[1] if len(parts) >= 2 else "/"
 
-        if data == "lihat_kategori":
-            await query.edit_message_text(
-                text="<b>📂 Pilih kategori produk:</b>",
-                reply_markup=category_menu_keyboard(),
-                parse_mode=ParseMode.HTML,
-            )
-            return
+        if path in {"/", HEALTHCHECK_PATH}:
+            status = "200 OK"
+            body = f"ok:{STORE_NAME}".encode("utf-8")
 
-        if data == "bantuan":
-            await query.edit_message_text(
-                text=help_text(),
-                reply_markup=main_menu_keyboard(),
-                parse_mode=ParseMode.HTML,
-            )
-            return
+        headers = [
+            f"HTTP/1.1 {status}",
+            "Content-Type: text/plain; charset=utf-8",
+            f"Content-Length: {len(body)}",
+            "Connection: close",
+            "",
+            "",
+        ]
+        writer.write("\r\n".join(headers).encode("utf-8"))
+        if method != "HEAD":
+            writer.write(body)
+        await writer.drain()
+    except Exception:
+        logger.exception("Healthcheck server error")
+    finally:
+        writer.close()
+        with suppress(Exception):
+            await writer.wait_closed()
 
-        if data.startswith("cat_"):
-            category_key = data.replace("cat_", "")
-            if category_key not in PRODUCTS:
-                await query.edit_message_text(
-                    text="Kategori tidak ditemukan.",
-                    reply_markup=main_menu_keyboard(),
-                )
-                return
 
-            await query.edit_message_text(
-                text=format_category_text(category_key),
-                reply_markup=item_menu_keyboard(category_key),
-                parse_mode=ParseMode.HTML,
-            )
-            return
+async def post_init(application: Application) -> None:
+    await application.bot.set_my_commands(BOT_COMMANDS)
+    logger.info("Bot commands registered.")
 
-        if data.startswith("item_"):
-            item_id = data.replace("item_", "")
-            if item_id not in ITEM_LOOKUP:
-                await query.edit_message_text(
-                    text="Produk tidak ditemukan.",
-                    reply_markup=main_menu_keyboard(),
-                )
-                return
+    if PORT <= 0:
+        logger.info("PORT is not set. Healthcheck server is disabled.")
+        return
 
-            await query.edit_message_text(
-                text=format_item_text(item_id),
-                reply_markup=order_keyboard(item_id),
-                parse_mode=ParseMode.HTML,
-            )
-            return
-    except BadRequest as exc:
-        # Umumnya terjadi saat user menekan tombol yang menghasilkan pesan yang sama.
-        logger.warning("BadRequest from Telegram: %s", exc)
-        if "Message is not modified" not in str(exc):
-            raise
+    server = await asyncio.start_server(handle_healthcheck, host="0.0.0.0", port=PORT)
+    application.bot_data["health_server"] = server
+    logger.info("Healthcheck server listening on port %s with path %s", PORT, HEALTHCHECK_PATH)
+
+
+async def post_shutdown(application: Application) -> None:
+    server = application.bot_data.pop("health_server", None)
+    if not server:
+        return
+
+    server.close()
+    await server.wait_closed()
+    logger.info("Healthcheck server stopped.")
+
+
+def build_application() -> Application:
+    return (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .http_version("1.1")
+        .get_updates_http_version("1.1")
+        .concurrent_updates(8)
+        .connection_pool_size(16)
+        .pool_timeout(30)
+        .connect_timeout(30)
+        .read_timeout(30)
+        .write_timeout(30)
+        .get_updates_connect_timeout(30)
+        .get_updates_read_timeout(30)
+        .get_updates_write_timeout(30)
+        .get_updates_pool_timeout(30)
+        .post_init(post_init)
+        .post_shutdown(post_shutdown)
+        .build()
+    )
 
 
 def main() -> None:
@@ -394,15 +784,24 @@ def main() -> None:
         raise RuntimeError("BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable.")
 
     logger.info("Starting bot for store: %s", STORE_NAME)
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = build_application()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("produk", produk_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
+    app.add_error_handler(error_handler)
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(
+        poll_interval=0.0,
+        timeout=30,
+        bootstrap_retries=-1,
+        drop_pending_updates=True,
+    )
 
 
 if __name__ == "__main__":
