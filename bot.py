@@ -290,24 +290,10 @@ def build_admin_url(message: str | None = None) -> str:
 
 def build_order_message(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
-    return "\n".join(
-        [
-            f"Halo Admin {STORE_NAME}, saya ingin order paket berikut.",
-            "",
-            "*RINGKASAN PESANAN*",
-            f"- Kode Paket: {item['id'].upper()}",
-            f"- Kategori: {item['category_title']}",
-            f"- Paket: {item['name']}",
-            f"- Durasi: {item['duration']}",
-            f"- Harga: {item['price']}",
-            "",
-            "*Mohon dibantu info:*",
-            "- stok saat ini",
-            "- metode pembayaran",
-            "- estimasi proses",
-            "",
-            "Terima kasih.",
-        ]
+    return (
+        f"Halo admin, saya mau order.\n"
+        f"{item['name']} - {item['duration']} - {item['price']}\n"
+        f"Mohon info stok."
     )
 
 
