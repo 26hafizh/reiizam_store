@@ -7,7 +7,6 @@ This bot can run well as a small always-on worker on Railway because it only nee
 - Python runtime
 - environment variables
 - outbound internet access for Telegram polling
-- a small healthcheck endpoint for deployment validation
 
 ## Storage recommendation for business use
 
@@ -29,7 +28,7 @@ Set these in the deploy platform:
 - `BOT_TOKEN`
 - `WA_NUMBER`
 - `STORE_NAME`
-- `HEALTHCHECK_PATH=/health`
+- `RESTART_DELAY_SECONDS=5` (optional)
 
 ## Start command
 
@@ -38,6 +37,4 @@ Set these in the deploy platform:
 ## Reliability notes
 
 - The bot uses long polling with retry-friendly startup settings.
-- A lightweight HTTP healthcheck is exposed on Railway's `PORT`.
-- Railway can use `/health` as the deployment healthcheck path.
 - For stricter 24/7 uptime on paid Railway plans, set restart policy to `Always` in the dashboard.

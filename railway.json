@@ -2,8 +2,6 @@
   "$schema": "https://railway.com/railway.schema.json",
   "deploy": {
     "startCommand": "python bot.py",
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 120,
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10
   }

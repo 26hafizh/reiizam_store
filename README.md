@@ -16,7 +16,6 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
 - User bisa ketik nama produk seperti `ChatGPT`, `Canva`, atau `Netflix`
 - Template chat WhatsApp lebih profesional untuk bantu order lebih cepat
 - Siap dipakai untuk deploy 24/7 dengan polling yang lebih stabil
-- Mendukung healthcheck HTTP kecil di path `/health` untuk kebutuhan deploy
 
 ## Cara jalankan lokal
 1. Install Python 3.10+.
@@ -29,7 +28,7 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
    BOT_TOKEN=ISI_TOKEN_BOT_KAMU
    WA_NUMBER=6285126019233
    STORE_NAME=reiizam store
-   HEALTHCHECK_PATH=/health
+   RESTART_DELAY_SECONDS=5
    ```
 4. Jalankan:
    ```bash
@@ -43,10 +42,9 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
    - `BOT_TOKEN`
    - `WA_NUMBER`
    - `STORE_NAME`
-   - `HEALTHCHECK_PATH=/health`
+   - `RESTART_DELAY_SECONDS=5` (opsional)
 4. Railway bisa memakai start command `python bot.py`. File `railway.json` juga sudah menyiapkannya.
-5. Bot akan membuka endpoint healthcheck kecil pada `PORT` dari Railway agar deployment lebih stabil.
-6. Setelah deploy berhasil, bot akan berjalan terus selama servicenya aktif.
+5. Setelah deploy berhasil, bot akan berjalan terus selama servicenya aktif.
 
 ## Catatan
 - Nomor WhatsApp harus pakai format internasional tanpa `+`.

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -26,19 +25,25 @@ from telegram.ext import (
 # KONFIGURASI
 # =========================================================
 def load_local_env() -> None:
-    env_path = Path(".env")
-    if not env_path.exists():
-        return
+    env_candidates = [
+        Path(".env"),
+        Path(__file__).resolve().with_name(".env"),
+    ]
 
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    for env_path in env_candidates:
+        if not env_path.exists():
             continue
 
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        os.environ.setdefault(key, value)
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+        return
 
 
 load_local_env()
@@ -60,13 +65,7 @@ def get_int_env(name: str, default: int) -> int:
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WA_NUMBER = os.getenv("WA_NUMBER", "6285126019233").strip()
 STORE_NAME = os.getenv("STORE_NAME", "reiizam store").strip()
-HEALTHCHECK_PATH = os.getenv("HEALTHCHECK_PATH", "/health").strip() or "/health"
 RESTART_DELAY_SECONDS = max(get_int_env("RESTART_DELAY_SECONDS", 5), 1)
-
-if not HEALTHCHECK_PATH.startswith("/"):
-    HEALTHCHECK_PATH = f"/{HEALTHCHECK_PATH}"
-
-PORT = get_int_env("PORT", 0)
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -731,62 +730,12 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             )
 
 
-async def handle_healthcheck(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-    status = "404 Not Found"
-    body = b"not found"
-
-    try:
-        request = await asyncio.wait_for(reader.read(1024), timeout=5)
-        request_line = request.split(b"\r\n", 1)[0].decode("latin-1", "ignore")
-        parts = request_line.split()
-        method = parts[0] if len(parts) >= 1 else "GET"
-        path = parts[1] if len(parts) >= 2 else "/"
-
-        if path in {"/", HEALTHCHECK_PATH}:
-            status = "200 OK"
-            body = f"ok:{STORE_NAME}".encode("utf-8")
-
-        headers = [
-            f"HTTP/1.1 {status}",
-            "Content-Type: text/plain; charset=utf-8",
-            f"Content-Length: {len(body)}",
-            "Connection: close",
-            "",
-            "",
-        ]
-        writer.write("\r\n".join(headers).encode("utf-8"))
-        if method != "HEAD":
-            writer.write(body)
-        await writer.drain()
-    except Exception:
-        logger.exception("Healthcheck server error")
-    finally:
-        writer.close()
-        with suppress(Exception):
-            await writer.wait_closed()
-
-
 async def post_init(application: Application) -> None:
-    await application.bot.set_my_commands(BOT_COMMANDS)
-    logger.info("Bot commands registered.")
-
-    if PORT <= 0:
-        logger.info("PORT is not set. Healthcheck server is disabled.")
-        return
-
-    server = await asyncio.start_server(handle_healthcheck, host="0.0.0.0", port=PORT)
-    application.bot_data["health_server"] = server
-    logger.info("Healthcheck server listening on port %s with path %s", PORT, HEALTHCHECK_PATH)
-
-
-async def post_shutdown(application: Application) -> None:
-    server = application.bot_data.pop("health_server", None)
-    if not server:
-        return
-
-    server.close()
-    await server.wait_closed()
-    logger.info("Healthcheck server stopped.")
+    try:
+        await application.bot.set_my_commands(BOT_COMMANDS)
+        logger.info("Bot commands registered.")
+    except Exception:
+        logger.exception("Gagal set bot commands. Bot tetap dilanjutkan agar tetap online.")
 
 
 def register_handlers(app: Application) -> None:
@@ -818,7 +767,6 @@ def build_application() -> Application:
         .get_updates_write_timeout(30)
         .get_updates_pool_timeout(30)
         .post_init(post_init)
-        .post_shutdown(post_shutdown)
         .build()
     )
 
