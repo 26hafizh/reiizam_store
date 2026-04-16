@@ -478,9 +478,9 @@ def build_admin_url(message: str | None = None) -> str:
 def build_order_message(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
     return (
-        'Halo admin, saya mau order.\n'
+        'Hallo min, saya mau order.\n'
         f"*{item['name']}* - *{item['duration']}* - *{item['price']}*\n"
-        'Mohon info stok.'
+        'Apakah Stok Ready?😁.'
     )
 
 
