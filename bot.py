@@ -75,7 +75,6 @@ RESTART_DELAY_SECONDS = max(get_int_env('RESTART_DELAY_SECONDS', 5), 1)
 IDLE_RESET_SECONDS = max(get_int_env('IDLE_RESET_SECONDS', 900), 60)
 
 UI_FEEDBACK_DELAY = 0.28
-CALLBACK_FEEDBACK_DELAY = 0.18
 DOUBLE_CLICK_GUARD_SECONDS = 1.2
 MAX_TELEGRAM_CAPTION_LENGTH = 1024
 
@@ -801,14 +800,66 @@ async def send_view_message(
     )
 
 
+async def try_edit_query_message(
+    query,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+    category_key: str | None = None,
+    allow_photo_edit_in_place: bool = False,
+) -> bool:
+    message = query.message
+    if not message:
+        return False
+
+    logo_path = get_logo_path(category_key) if category_key else None
+    target_is_photo = bool(logo_path and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+    current_is_photo = bool(getattr(message, 'photo', None))
+
+    try:
+        if current_is_photo and target_is_photo and allow_photo_edit_in_place:
+            await query.edit_message_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+            )
+            return True
+
+        if not current_is_photo and not target_is_photo:
+            await query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            return True
+    except BadRequest as exc:
+        if 'message is not modified' in str(exc).lower():
+            return True
+        logger.warning('Gagal mengedit pesan callback secara in-place.', exc_info=True)
+    except Exception:
+        logger.warning('Gagal mengedit pesan callback secara in-place.', exc_info=True)
+
+    return False
+
+
 async def replace_query_message(
     query,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
     category_key: str | None = None,
+    allow_photo_edit_in_place: bool = False,
 ) -> None:
     message = query.message
     if not message:
+        return
+
+    if await try_edit_query_message(
+        query,
+        text,
+        reply_markup=reply_markup,
+        category_key=category_key,
+        allow_photo_edit_in_place=allow_photo_edit_in_place,
+    ):
         return
 
     await send_view_message(
@@ -831,23 +882,17 @@ async def answer_and_replace(
     answer_text: str,
     text: str,
     reply_markup: InlineKeyboardMarkup | None = None,
-    with_feedback: bool = False,
     category_key: str | None = None,
+    allow_photo_edit_in_place: bool = False,
 ) -> None:
-    if with_feedback:
-        await query.answer(answer_text)
-        if query.message:
-            with suppress(Exception):
-                await query.message.get_bot().send_chat_action(
-                    chat_id=query.message.chat_id,
-                    action=ChatAction.TYPING,
-                )
-        await asyncio.sleep(CALLBACK_FEEDBACK_DELAY)
-        await replace_query_message(query, text, reply_markup, category_key=category_key)
-        return
-
     await query.answer(answer_text)
-    await replace_query_message(query, text, reply_markup, category_key=category_key)
+    await replace_query_message(
+        query,
+        text,
+        reply_markup,
+        category_key=category_key,
+        allow_photo_edit_in_place=allow_photo_edit_in_place,
+    )
 
 
 # =========================================================
@@ -957,7 +1002,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Sesi lama di-reset.',
             idle_reset_text(),
             main_menu_keyboard(),
-            with_feedback=True,
         )
         return
 
@@ -973,7 +1017,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Membuka menu...',
             welcome_text(),
             main_menu_keyboard(),
-            with_feedback=True,
         )
         return
 
@@ -984,7 +1027,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Menampilkan katalog...',
             catalog_intro_text(),
             category_menu_keyboard(),
-            with_feedback=True,
         )
         return
 
@@ -995,7 +1037,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Membuka info order...',
             help_text(),
             main_menu_keyboard(),
-            with_feedback=True,
         )
         return
 
@@ -1010,8 +1051,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Membuka kategori...',
             format_category_text(category_key),
             item_menu_keyboard(category_key),
-            with_feedback=True,
             category_key=category_key,
+            allow_photo_edit_in_place=True,
         )
         return
 
@@ -1026,8 +1067,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             'Menyiapkan detail paket...',
             format_item_text(item_id),
             order_keyboard(item_id),
-            with_feedback=True,
             category_key=ITEM_LOOKUP[item_id]['category_key'],
+            allow_photo_edit_in_place=True,
         )
         return
 
