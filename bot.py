@@ -105,7 +105,7 @@ CATEGORY_LOGOS = {
 PRODUCTS = {
     'canva': {
         'title': 'Canva',
-        'icon': '🎨',
+        'icon': '🪄',
         'description': 'Paket desain untuk kebutuhan konten, branding, dan editing harian.',
         'items': [
             {'id': 'canva_01', 'name': 'Member Pro', 'duration': '1 bulan', 'price': 'Rp5.000', 'notes': []},
@@ -116,7 +116,7 @@ PRODUCTS = {
     },
     'chatgpt': {
         'title': 'ChatGPT',
-        'icon': '🤖',
+        'icon': '✨',
         'description': 'Pilihan paket AI premium untuk kebutuhan chat, ide, dan produktivitas.',
         'items': [
             {
@@ -150,7 +150,7 @@ PRODUCTS = {
     },
     'youtube': {
         'title': 'YouTube',
-        'icon': '▶️',
+        'icon': '📺',
         'description': 'Paket YouTube premium untuk nonton tanpa iklan dengan harga ringan.',
         'items': [
             {'id': 'youtube_01', 'name': 'Famplan (Invite)', 'duration': '1 bulan', 'price': 'Rp4.000', 'notes': []},
@@ -161,7 +161,7 @@ PRODUCTS = {
     },
     'netflix_harian': {
         'title': 'Netflix Harian',
-        'icon': '📺',
+        'icon': '🎟️',
         'description': 'Pilihan harian untuk kebutuhan nonton cepat dan fleksibel.',
         'items': [
             {'id': 'neth_01', 'name': '1 Hari 2 User', 'duration': '1 hari', 'price': 'Rp3.000', 'notes': []},
@@ -201,7 +201,7 @@ PRODUCTS = {
     },
     'apple_music': {
         'title': 'Apple Music',
-        'icon': '🎵',
+        'icon': '🎼',
         'description': 'Paket musik premium untuk pengalaman dengar yang lebih nyaman.',
         'items': [
             {'id': 'apple_01', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': []},
@@ -218,7 +218,7 @@ PRODUCTS = {
     },
     'alight_motion': {
         'title': 'Alight Motion',
-        'icon': '✨',
+        'icon': '🌠',
         'description': 'Paket editing motion untuk kebutuhan konten dan video kreatif.',
         'items': [
             {'id': 'alight_01', 'name': 'Private - Akun Seller', 'duration': '1 tahun', 'price': 'Rp10.000', 'notes': []},
@@ -228,7 +228,7 @@ PRODUCTS = {
     },
     'wink': {
         'title': 'Wink',
-        'icon': '💖',
+        'icon': '💞',
         'description': 'Pilihan paket Wink dengan opsi sharing, private, dan jaspay.',
         'items': [
             {'id': 'wink_01', 'name': 'Sharing', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
@@ -240,7 +240,7 @@ PRODUCTS = {
     },
     'capcut': {
         'title': 'CapCut',
-        'icon': '🎬',
+        'icon': '🎞️',
         'description': 'Paket edit video CapCut dengan pilihan sharing dan private.',
         'items': [
             {'id': 'capcut_01', 'name': 'Sharing 3 User', 'duration': '7 hari', 'price': 'Rp5.000', 'notes': []},
@@ -252,7 +252,7 @@ PRODUCTS = {
     },
     'getcontact': {
         'title': 'GetContact',
-        'icon': '📲',
+        'icon': '🔎',
         'description': 'Paket GetContact untuk kebutuhan premium dengan proses jaspay.',
         'items': [
             {'id': 'getcontact_01', 'name': 'Jaspay - Akun Buyer', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': ['Jaspay', 'Akun dari buyer']},
@@ -261,7 +261,7 @@ PRODUCTS = {
     },
     'zoom': {
         'title': 'Zoom',
-        'icon': '🎥',
+        'icon': '💻',
         'description': 'Paket Zoom private untuk meeting dengan kapasitas hingga 100 peserta.',
         'items': [
             {'id': 'zoom_01', 'name': 'Private 100 Peserta', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
@@ -286,7 +286,7 @@ PRODUCTS = {
     },
     'duolingo': {
         'title': 'Duolingo',
-        'icon': '🦉',
+        'icon': '🗣️',
         'description': 'Paket belajar premium Duolingo dengan opsi private, head, dan famplan.',
         'items': [
             {'id': 'duolingo_01', 'name': 'Private', 'duration': '1 bulan', 'price': 'Rp13.000', 'notes': []},
@@ -297,12 +297,13 @@ PRODUCTS = {
     },
     'google_drive': {
         'title': 'Google Drive',
-        'icon': '☁️',
-        'description': 'Paket storage premium lengkap dengan bonus Gemini Pro dan YouTube Premium.',
+        'icon': '📁',
+        'description': 'Paket storage premium 5TB lengkap dengan bonus Gemini AI dan YouTube Premium.',
         'items': [
-            {'id': 'gdrive_01', 'name': '5TB Bundle', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': ['Gemini Pro', 'YouTube Premium']},
+            {'id': 'gdrive_01', 'name': '5TB Bundle', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': []},
         ],
-        'category_notes': [],
+        'category_notes': ['Bonus Gemini AI', 'Bonus YouTube Premium'],
+        'category_note_title': 'Bonus',
     },
 }
 
@@ -564,7 +565,7 @@ def welcome_text() -> str:
         'Duolingo',
         'Google Drive',
     ]
-    catalog_text = '\n'.join(f"• <b>{escape(item)}</b>" for item in catalog_items)
+    catalog_box = make_text_box([f"• {item}" for item in catalog_items])
 
     benefit_box = make_text_box([
         '• Harga santai',
@@ -577,7 +578,7 @@ def welcome_text() -> str:
         '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
         '<b>✦ Apps Tersedia ✦</b>\n'
         '<i>Pilih produk yang kamu cari di bawah ini.</i>\n\n'
-        f"{catalog_text}\n\n"
+        f"<code>{escape(catalog_box)}</code>\n\n"
         f"<code>{escape(benefit_box)}</code>\n\n"
         '<b>Butuh bantuan?</b>\n'
         'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.'
@@ -723,6 +724,7 @@ def make_text_box(lines: list[str], title: str | None = None) -> str:
 @lru_cache(maxsize=None)
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
+    category_note_title = data.get('category_note_title', 'Catatan')
     sections = [
         f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
         f"<i>{escape(data['description'])}</i>",
@@ -739,7 +741,7 @@ def format_category_text(category_key: str) -> str:
         sections.append('')
 
     if data['category_notes']:
-        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title='Catatan')
+        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title=category_note_title)
         sections.append(f"<code>{escape(note_box)}</code>")
         sections.append('')
 
@@ -750,7 +752,9 @@ def format_category_text(category_key: str) -> str:
 @lru_cache(maxsize=None)
 def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
-    category_notes = PRODUCTS[item['category_key']]['category_notes']
+    category_data = PRODUCTS[item['category_key']]
+    category_notes = category_data['category_notes']
+    category_note_title = category_data.get('category_note_title', 'Catatan')
 
     summary_box = make_text_box([
         item['name'],
@@ -769,7 +773,7 @@ def format_item_text(item_id: str) -> str:
         lines.append('')
 
     if category_notes:
-        note_box = make_text_box([f"• {note}" for note in category_notes], title='Catatan')
+        note_box = make_text_box([f"• {note}" for note in category_notes], title=category_note_title)
         lines.append(f"<code>{escape(note_box)}</code>")
         lines.append('')
 
