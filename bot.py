@@ -491,7 +491,7 @@ def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[I
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton('🛍️ Lihat Katalog Premium', callback_data='lihat_kategori')],
+            [InlineKeyboardButton('🛍️ List Product', callback_data='lihat_kategori')],
             [InlineKeyboardButton('📌 Cara Order Cepat', callback_data='bantuan')],
         ]
     )
@@ -580,8 +580,7 @@ def welcome_text() -> str:
         f"{catalog_text}\n\n"
         f"<code>{escape(benefit_box)}</code>\n\n"
         '<b>Butuh bantuan?</b>\n'
-        'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.\n'
-        '<i>Pilih menu di bawah untuk mulai lihat katalog.</i>'
+        'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.'
     )
 
 
