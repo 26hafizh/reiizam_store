@@ -549,32 +549,35 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 @lru_cache(maxsize=1)
 def welcome_text() -> str:
-    catalog_box = make_text_box([
-        '• Canva',
-        '• ChatGPT',
-        '• Netflix',
-        '• YouTube',
-        '• Apple Music',
-        '• Alight Motion',
-        '• Wink',
-        '• CapCut',
-        '• GetContact',
-        '• Zoom',
-        '• Spotify',
-        '• Duolingo',
-        '• Google Drive',
-    ], title='Apps Tersedia')
+    catalog_items = [
+        'Canva',
+        'ChatGPT',
+        'Netflix',
+        'YouTube',
+        'Apple Music',
+        'Alight Motion',
+        'Wink',
+        'CapCut',
+        'GetContact',
+        'Zoom',
+        'Spotify',
+        'Duolingo',
+        'Google Drive',
+    ]
+    catalog_text = '\n'.join(f"• <b>{escape(item)}</b>" for item in catalog_items)
 
     benefit_box = make_text_box([
         '• Harga santai',
         '• Paket lengkap',
-        '• Lanjut order ke WhatsApp admin',
+        '• Bergaransi',
     ], title='Kenapa Order Di Sini')
 
     return (
         f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
         '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
-        f"<code>{escape(catalog_box)}</code>\n\n"
+        '<b>✦ Apps Tersedia ✦</b>\n'
+        '<i>Pilih produk yang kamu cari di bawah ini.</i>\n\n'
+        f"{catalog_text}\n\n"
         f"<code>{escape(benefit_box)}</code>\n\n"
         '<b>Butuh bantuan?</b>\n'
         'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.\n'
@@ -589,7 +592,7 @@ def catalog_intro_text() -> str:
         '2. Pilih paket yang cocok',
         '3. Tekan tombol order',
         '4. Lanjut ke WhatsApp admin',
-    ], title='Flow Order')
+    ], title='Cara Order')
 
     return (
         '<b>🛍️ Katalog Produk</b>\n'
