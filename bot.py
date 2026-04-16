@@ -238,6 +238,72 @@ PRODUCTS = {
         ],
         'category_notes': [],
     },
+    'capcut': {
+        'title': 'CapCut',
+        'icon': '🎬',
+        'description': 'Paket edit video CapCut dengan pilihan sharing dan private.',
+        'items': [
+            {'id': 'capcut_01', 'name': 'Sharing 3 User', 'duration': '7 hari', 'price': 'Rp5.000', 'notes': []},
+            {'id': 'capcut_02', 'name': 'Sharing 3 User', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': []},
+            {'id': 'capcut_03', 'name': 'Private', 'duration': '7 hari', 'price': 'Rp7.000', 'notes': []},
+            {'id': 'capcut_04', 'name': 'Private', 'duration': '1 bulan', 'price': 'Rp12.000', 'notes': []},
+        ],
+        'category_notes': [],
+    },
+    'getcontact': {
+        'title': 'GetContact',
+        'icon': '📲',
+        'description': 'Paket GetContact untuk kebutuhan premium dengan proses jaspay.',
+        'items': [
+            {'id': 'getcontact_01', 'name': 'Jaspay - Akun Buyer', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': ['Jaspay', 'Akun dari buyer']},
+        ],
+        'category_notes': [],
+    },
+    'zoom': {
+        'title': 'Zoom',
+        'icon': '🎥',
+        'description': 'Paket Zoom private untuk meeting dengan kapasitas hingga 100 peserta.',
+        'items': [
+            {'id': 'zoom_01', 'name': 'Private 100 Peserta', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
+            {'id': 'zoom_02', 'name': 'Private 100 Peserta', 'duration': '14 hari', 'price': 'Rp13.000', 'notes': []},
+        ],
+        'category_notes': [],
+    },
+    'spotify': {
+        'title': 'Spotify',
+        'icon': '🎧',
+        'description': 'Pilihan paket Spotify dengan opsi full garansi, no garansi, dan link penawaran student.',
+        'items': [
+            {'id': 'spotify_01', 'name': 'Indplan', 'duration': '1 bulan', 'price': 'Rp22.000', 'notes': ['Full garansi']},
+            {'id': 'spotify_02', 'name': 'Indplan', 'duration': '3 bulan', 'price': 'Rp33.000', 'notes': ['Full garansi']},
+            {'id': 'spotify_03', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp21.000', 'notes': ['Full garansi']},
+            {'id': 'spotify_04', 'name': 'Famplan', 'duration': '3 bulan', 'price': 'Rp34.000', 'notes': ['Full garansi']},
+            {'id': 'spotify_05', 'name': 'Student', 'duration': '1 bulan', 'price': 'Rp13.000', 'notes': ['No garansi']},
+            {'id': 'spotify_06', 'name': 'Indplan', 'duration': '3 bulan', 'price': 'Rp17.000', 'notes': ['No garansi']},
+            {'id': 'spotify_07', 'name': 'Link Penawaran Student', 'duration': '1x proses', 'price': 'Rp6.000', 'notes': ['Akun dari buyer']},
+        ],
+        'category_notes': [],
+    },
+    'duolingo': {
+        'title': 'Duolingo',
+        'icon': '🦉',
+        'description': 'Paket belajar premium Duolingo dengan opsi private, head, dan famplan.',
+        'items': [
+            {'id': 'duolingo_01', 'name': 'Private', 'duration': '1 bulan', 'price': 'Rp13.000', 'notes': []},
+            {'id': 'duolingo_02', 'name': 'Head', 'duration': '1 bulan', 'price': 'Rp18.000', 'notes': ['Bisa invite 5 akun']},
+            {'id': 'duolingo_03', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp11.000', 'notes': []},
+        ],
+        'category_notes': [],
+    },
+    'google_drive': {
+        'title': 'Google Drive',
+        'icon': '☁️',
+        'description': 'Paket storage premium lengkap dengan bonus Gemini Pro dan YouTube Premium.',
+        'items': [
+            {'id': 'gdrive_01', 'name': '5TB Bundle', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': ['Gemini Pro', 'YouTube Premium']},
+        ],
+        'category_notes': [],
+    },
 }
 
 BOT_COMMANDS = [
@@ -256,6 +322,12 @@ CATEGORY_ALIASES = {
     'apple_music': ['apple music', 'music apple'],
     'alight_motion': ['alight motion', 'alight'],
     'wink': ['wink'],
+    'capcut': ['capcut', 'cap cut'],
+    'getcontact': ['getcontact', 'get contact'],
+    'zoom': ['zoom'],
+    'spotify': ['spotify', 'spoti'],
+    'duolingo': ['duolingo', 'duo lingo'],
+    'google_drive': ['google drive', 'gdrive', 'drive google'],
 }
 
 GENERIC_ITEM_ALIASES = {
@@ -265,6 +337,9 @@ GENERIC_ITEM_ALIASES = {
     'head',
     'famplan',
     'indplan',
+    'student',
+    'sharing',
+    'jaspay',
 }
 
 
@@ -296,6 +371,8 @@ for category_key, category_data in PRODUCTS.items():
         aliases = {
             normalize_text(item['id']),
             normalize_text(f"{category_data['title']} {item['name']}"),
+            normalize_text(f"{category_data['title']} {item['name']} {item['duration']}"),
+            normalize_text(f"{item['name']} {item['duration']}"),
         }
         plain_name = normalize_text(item['name'])
         if plain_name not in GENERIC_ITEM_ALIASES:
@@ -307,16 +384,47 @@ for category_key, category_data in PRODUCTS.items():
 # SESSION STATE
 # =========================================================
 
-def get_chat_state(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> dict:
-    return context.application.chat_data[chat_id]
+SESSION_STORE_KEY = 'session_states'
 
 
-def touch_chat(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    get_chat_state(context, chat_id)['last_seen'] = time.time()
+def build_session_key(chat_id: int, user_id: int | None = None) -> str:
+    if user_id is None:
+        return f'chat:{chat_id}'
+    return f'chat:{chat_id}:user:{user_id}'
 
 
-def is_chat_idle(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> bool:
-    chat_state = get_chat_state(context, chat_id)
+def get_chat_state(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> dict:
+    session_store = context.application.bot_data.setdefault(SESSION_STORE_KEY, {})
+    session_key = build_session_key(chat_id, user_id)
+    return session_store.setdefault(session_key, {})
+
+
+def reset_chat_state(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> None:
+    get_chat_state(context, chat_id, user_id).clear()
+
+
+def touch_chat(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> None:
+    get_chat_state(context, chat_id, user_id)['last_seen'] = time.time()
+
+
+def is_chat_idle(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> bool:
+    chat_state = get_chat_state(context, chat_id, user_id)
     last_seen = float(chat_state.get('last_seen', 0.0) or 0.0)
     now = time.time()
     chat_state['last_seen'] = now
@@ -332,8 +440,12 @@ def get_logo_path(category_key: str) -> Path | None:
     return logo_path
 
 
-async def clear_logo_message(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    chat_state = get_chat_state(context, chat_id)
+async def clear_logo_message(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> None:
+    chat_state = get_chat_state(context, chat_id, user_id)
     chat_state.pop('logo_message_id', None)
     chat_state.pop('logo_category_key', None)
 
@@ -342,8 +454,9 @@ async def ensure_logo_message(
     context: ContextTypes.DEFAULT_TYPE,
     chat_id: int,
     category_key: str,
+    user_id: int | None = None,
 ) -> None:
-    chat_state = get_chat_state(context, chat_id)
+    chat_state = get_chat_state(context, chat_id, user_id)
     if get_logo_path(category_key):
         chat_state['logo_category_key'] = category_key
         return
@@ -436,51 +549,71 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 @lru_cache(maxsize=1)
 def welcome_text() -> str:
+    catalog_box = make_text_box([
+        '• Canva',
+        '• ChatGPT',
+        '• Netflix',
+        '• YouTube',
+        '• Apple Music',
+        '• Alight Motion',
+        '• Wink',
+        '• CapCut',
+        '• GetContact',
+        '• Zoom',
+        '• Spotify',
+        '• Duolingo',
+        '• Google Drive',
+    ], title='Apps Tersedia')
+
+    benefit_box = make_text_box([
+        '• Harga santai',
+        '• Paket lengkap',
+        '• Lanjut order ke WhatsApp admin',
+    ], title='Kenapa Order Di Sini')
+
     return (
         f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
         '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
-        '<b>Yang tersedia di sini:</b>\n'
-        '• Canva\n'
-        '• ChatGPT\n'
-        '• Netflix\n'
-        '• YouTube\n'
-        '• Apple Music\n'
-        '• Alight Motion\n'
-        '• Wink\n\n'
-        '<b>Kenapa order di sini?</b>\n'
-        '• Harga santai\n'
-        '• Paket lengkap\n'
-        '• Tinggal pilih lalu lanjut ke WhatsApp admin\n\n'
-        'Kalau ada yang mau ditanyakan, <b>sung dm aja ya bre</b>.\n'
+        f"<code>{escape(catalog_box)}</code>\n\n"
+        f"<code>{escape(benefit_box)}</code>\n\n"
+        '<b>Butuh bantuan?</b>\n'
+        'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.\n'
         '<i>Pilih menu di bawah untuk mulai lihat katalog.</i>'
     )
 
 
 @lru_cache(maxsize=1)
 def catalog_intro_text() -> str:
+    flow_box = make_text_box([
+        '1. Pilih kategori app',
+        '2. Pilih paket yang cocok',
+        '3. Tekan tombol order',
+        '4. Lanjut ke WhatsApp admin',
+    ], title='Flow Order')
+
     return (
         '<b>🛍️ Katalog Produk</b>\n'
         '<i>Pilih app yang kamu butuhin, lalu lanjut ke detail paketnya.</i>\n\n'
-        '<b>Flow order:</b>\n'
-        '1. Pilih kategori app\n'
-        '2. Pilih paket yang cocok\n'
-        '3. Tekan tombol order\n'
-        '4. Langsung lanjut ke WhatsApp admin\n\n'
+        f"<code>{escape(flow_box)}</code>\n\n"
         '<i>Sok dipilih dulu aja ya bre.</i>'
     )
 
 
 @lru_cache(maxsize=1)
 def help_text() -> str:
+    order_box = make_text_box([
+        '1. Buka katalog',
+        '2. Pilih kategori produk',
+        '3. Pilih paket yang diinginkan',
+        '4. Tekan tombol order ke WhatsApp',
+    ], title='Cara Order Cepat')
+
     return (
         '<b>📌 INFO ORDER</b>\n'
-        '<i>Biar cepat, alurnya tinggal begini:</i>\n\n'
-        '1. Buka katalog\n'
-        '2. Pilih kategori produk\n'
-        '3. Pilih paket yang diinginkan\n'
-        '4. Tekan tombol order ke WhatsApp\n\n'
-        'Kalau udah nemu product yang ingin dibeli,\n'
-        'nanti langsung diarahin sama si bot nya ke WA saya ya bre.'
+        '<i>Biar cepat, alurnya tinggal begini.</i>\n\n'
+        f"<code>{escape(order_box)}</code>\n\n"
+        'Kalau udah nemu produk yang ingin dibeli,\n'
+        'nanti langsung diarahkan ke WhatsApp admin ya bre.'
     )
 
 
@@ -594,9 +727,9 @@ def format_category_text(category_key: str) -> str:
         '',
     ]
 
-    for index, item in enumerate(data['items'], start=1):
+    for item in data['items']:
         box = make_text_box([
-            f"{index}. {item['name']}",
+            item['name'],
             f"Durasi : {item['duration']}",
             f"Harga  : {item['price']}",
         ])
@@ -665,8 +798,9 @@ def is_duplicate_callback(
     chat_id: int,
     data: str,
     message_id: int | None,
+    user_id: int | None = None,
 ) -> bool:
-    chat_state = get_chat_state(context, chat_id)
+    chat_state = get_chat_state(context, chat_id, user_id)
     now = time.time()
     callback_key = f'{message_id or 0}:{data}'
     last_data = str(chat_state.get('last_callback_data', '') or '')
@@ -728,19 +862,23 @@ async def reply_html(
 
 
 async def send_main_menu(message, context: ContextTypes.DEFAULT_TYPE) -> None:
-    touch_chat(context, message.chat_id)
-    await clear_logo_message(context, message.chat_id)
+    user_id = message.from_user.id if message.from_user else None
+    reset_chat_state(context, message.chat_id, user_id)
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
     await reply_html(message, welcome_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
 async def send_catalog(message, context: ContextTypes.DEFAULT_TYPE) -> None:
-    touch_chat(context, message.chat_id)
-    await clear_logo_message(context, message.chat_id)
+    user_id = message.from_user.id if message.from_user else None
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
     await reply_html(message, catalog_intro_text(), category_menu_keyboard(), with_typing_feedback=True)
 
 
 async def send_category(message, category_key: str, context: ContextTypes.DEFAULT_TYPE) -> None:
-    touch_chat(context, message.chat_id)
+    user_id = message.from_user.id if message.from_user else None
+    touch_chat(context, message.chat_id, user_id)
     await reply_html(
         message,
         format_category_text(category_key),
@@ -751,7 +889,8 @@ async def send_category(message, category_key: str, context: ContextTypes.DEFAUL
 
 
 async def send_item(message, item_id: str, context: ContextTypes.DEFAULT_TYPE) -> None:
-    touch_chat(context, message.chat_id)
+    user_id = message.from_user.id if message.from_user else None
+    touch_chat(context, message.chat_id, user_id)
     await reply_html(
         message,
         format_item_text(item_id),
@@ -911,8 +1050,9 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
-        touch_chat(context, update.message.chat_id)
-        await clear_logo_message(context, update.message.chat_id)
+        user_id = update.message.from_user.id if update.message.from_user else None
+        touch_chat(context, update.message.chat_id, user_id)
+        await clear_logo_message(context, update.message.chat_id, user_id)
         await reply_html(update.message, help_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
@@ -926,15 +1066,18 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not message or not message.text:
         return
 
+    user_id = message.from_user.id if message.from_user else None
     normalized = normalize_text(message.text)
 
-    if is_chat_idle(context, message.chat_id) and not wants_main_menu_reset(message.text):
-        await clear_logo_message(context, message.chat_id)
+    if is_chat_idle(context, message.chat_id, user_id) and not wants_main_menu_reset(message.text):
+        reset_chat_state(context, message.chat_id, user_id)
+        touch_chat(context, message.chat_id, user_id)
+        await clear_logo_message(context, message.chat_id, user_id)
         await reply_html(message, idle_reset_text(), main_menu_keyboard(), with_typing_feedback=True)
         return
 
     if not normalized:
-        await clear_logo_message(context, message.chat_id)
+        await clear_logo_message(context, message.chat_id, user_id)
         await reply_html(message, fallback_text(), main_menu_keyboard(), with_typing_feedback=True)
         return
 
@@ -947,7 +1090,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if matches_alias(normalized, 'netflix') and not matches_alias(normalized, 'harian') and not matches_alias(normalized, 'bulanan'):
-        touch_chat(context, message.chat_id)
+        touch_chat(context, message.chat_id, user_id)
         await reply_html(
             message,
             netflix_prompt_text(),
@@ -967,15 +1110,16 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_category(message, category_key, context)
         return
 
-    touch_chat(context, message.chat_id)
-    await clear_logo_message(context, message.chat_id)
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
     await reply_html(message, fallback_text(), main_menu_keyboard(), with_typing_feedback=True)
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
-        touch_chat(context, update.message.chat_id)
-        await clear_logo_message(context, update.message.chat_id)
+        user_id = update.message.from_user.id if update.message.from_user else None
+        touch_chat(context, update.message.chat_id, user_id)
+        await clear_logo_message(context, update.message.chat_id, user_id)
         await reply_html(
             update.message,
             text='Perintah belum tersedia. Gunakan menu di bawah ya.',
@@ -991,12 +1135,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     message = query.message
     chat_id = message.chat_id if message else update.effective_chat.id if update.effective_chat else None
+    user_id = update.effective_user.id if update.effective_user else None
     if chat_id is None:
         await query.answer('Chat tidak ditemukan.', show_alert=True)
         return
 
-    if is_chat_idle(context, chat_id):
-        await clear_logo_message(context, chat_id)
+    if is_chat_idle(context, chat_id, user_id):
+        reset_chat_state(context, chat_id, user_id)
+        touch_chat(context, chat_id, user_id)
+        await clear_logo_message(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Sesi lama di-reset.',
@@ -1006,12 +1153,14 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     data = query.data or ''
-    if is_duplicate_callback(context, chat_id, data, message.message_id if message else None):
+    if is_duplicate_callback(context, chat_id, data, message.message_id if message else None, user_id):
         await query.answer()
         return
 
     if data == 'menu':
-        await clear_logo_message(context, chat_id)
+        reset_chat_state(context, chat_id, user_id)
+        touch_chat(context, chat_id, user_id)
+        await clear_logo_message(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Membuka menu...',
@@ -1021,7 +1170,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if data == 'lihat_kategori':
-        await clear_logo_message(context, chat_id)
+        touch_chat(context, chat_id, user_id)
+        await clear_logo_message(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Menampilkan katalog...',
@@ -1031,7 +1181,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if data == 'bantuan':
-        await clear_logo_message(context, chat_id)
+        touch_chat(context, chat_id, user_id)
+        await clear_logo_message(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Membuka info order...',
@@ -1046,6 +1197,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Kategori tidak ditemukan.', show_alert=True)
             return
 
+        touch_chat(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Membuka kategori...',
@@ -1062,6 +1214,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.answer('Paket tidak ditemukan.', show_alert=True)
             return
 
+        touch_chat(context, chat_id, user_id)
         await answer_and_replace(
             query,
             'Menyiapkan detail paket...',
