@@ -565,7 +565,14 @@ def welcome_text() -> str:
         'Duolingo',
         'Google Drive',
     ]
-    catalog_box = make_text_box([f"• {item}" for item in catalog_items])
+    catalog_box = make_text_box(
+        [
+            'Pilih produk yang kamu cari di bawah ini.',
+            '',
+            *[f"• {item}" for item in catalog_items],
+        ],
+        title='Apps Tersedia',
+    )
 
     benefit_box = make_text_box([
         '• Harga santai',
@@ -576,8 +583,6 @@ def welcome_text() -> str:
     return (
         f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
         '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
-        '<b>✦ Apps Tersedia ✦</b>\n'
-        '<i>Pilih produk yang kamu cari di bawah ini.</i>\n\n'
         f"<code>{escape(catalog_box)}</code>\n\n"
         f"<code>{escape(benefit_box)}</code>\n\n"
         '<b>Butuh bantuan?</b>\n'
