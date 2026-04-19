@@ -982,7 +982,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def reload_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    reload_data_if_needed()
+    pass  # Data managed via shared_data, no polling reload needed
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.exception('Unhandled error while processing update', exc_info=context.error)
