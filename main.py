@@ -1,16 +1,18 @@
-import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
-load_dotenv()
-import shared_data
 
-# Load data at startup
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from telegram import Update
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import shared_data
 shared_data.load_all_data()
 
-# Import after loading data, so bot_core can access it
 from bot_core import get_application
 from admin_routes import router as admin_router
 
@@ -20,37 +22,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Railway otomatis set RAILWAY_PUBLIC_DOMAIN → pakai webhook
+# Lokal tidak ada → pakai polling
+RAILWAY_DOMAIN = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
+WEBHOOK_PATH   = '/telegram/webhook'
+WEBHOOK_URL    = f'https://{RAILWAY_DOMAIN}{WEBHOOK_PATH}' if RAILWAY_DOMAIN else None
+
 bot_app = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global bot_app
     bot_app = get_application()
-    
-    logger.info("Initializing Telegram Bot...")
+
     await bot_app.initialize()
     await bot_app.start()
-    await bot_app.updater.start_polling(drop_pending_updates=True)
-    logger.info("Telegram Bot started in background!")
-    
+
+    if WEBHOOK_URL:
+        await bot_app.bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+        logger.info('Webhook mode aktif: %s', WEBHOOK_URL)
+    else:
+        await bot_app.updater.start_polling(drop_pending_updates=True)
+        logger.info('Polling mode aktif (lokal).')
+
     yield
-    
-    logger.info("Stopping Telegram Bot...")
-    await bot_app.updater.stop()
+
+    logger.info('Shutting down bot...')
+    if WEBHOOK_URL:
+        await bot_app.bot.delete_webhook()
+    else:
+        await bot_app.updater.stop()
+
     await bot_app.stop()
     await bot_app.shutdown()
-    logger.info("Telegram Bot stopped.")
+    logger.info('Bot stopped.')
 
-app = FastAPI(title="Reiizam Store", lifespan=lifespan)
 
-# Mount admin router
+app = FastAPI(title='Reiizam Store', lifespan=lifespan)
+
+
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(request: Request):
+    """Endpoint yang menerima update dari Telegram (production/webhook mode)."""
+    data = await request.json()
+    update = Update.de_json(data, bot_app.bot)
+    await bot_app.process_update(update)
+    return JSONResponse({'ok': True})
+
+
 app.include_router(admin_router)
-
-# Static files
 app.mount('/static', StaticFiles(directory='static'), name='static')
-
-if __name__ == '__main__':
-    import uvicorn
-    import os
-    port = int(os.getenv('PORT', 8000))
-    uvicorn.run(app, host='0.0.0.0', port=port)
