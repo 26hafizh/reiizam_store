@@ -12,10 +12,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(title="Reiizam Admin Panel")
-app.mount('/static', StaticFiles(directory='static'), name='static')
-templates = Jinja2Templates(directory='templates')
-
 BASE_DIR = Path(__file__).parent
+app.mount('/static', StaticFiles(directory=str(BASE_DIR / 'static')), name='static')
+templates = Jinja2Templates(directory=str(BASE_DIR / 'templates'))
+
 PRODUCTS_PATH = BASE_DIR / 'products.json'
 CONFIG_PATH = BASE_DIR / 'config.json'
 
