@@ -161,8 +161,24 @@ def reload_data_if_needed():
         # Rebuild logos
         CATEGORY_LOGOS.clear()
         for cat_key, cat_data in PRODUCTS.items():
-            if logo_rel := cat_data.get('logo', ''):
-                CATEGORY_LOGOS[cat_key] = BASE_DIR / logo_rel
+            logo_val = cat_data.get('logo', '')
+            if not logo_val:
+                continue
+                
+            if logo_val.startswith('data:image/'):
+                # Base64 logo
+                try:
+                    import base64
+                    from io import BytesIO
+                    header, encoded = logo_val.split(',', 1)
+                    CATEGORY_LOGOS[cat_key] = BytesIO(base64.b64decode(encoded))
+                except Exception as e:
+                    logger.warning('Failed to decode base64 logo for %s: %s', cat_key, e)
+            else:
+                # File path logo
+                path = BASE_DIR / logo_val
+                if path.exists():
+                    CATEGORY_LOGOS[cat_key] = path
 
         # Rebuild lookups
         ITEM_LOOKUP.clear()
@@ -302,9 +318,11 @@ def is_chat_idle(
     return (now - last_seen) >= IDLE_RESET_SECONDS
 
 
-def get_logo_path(category_key: str) -> Path | None:
-    logo_path = CATEGORY_LOGOS.get(category_key)
-    return logo_path if logo_path and logo_path.exists() else None
+def get_logo_data(category_key: str):
+    logo_data = CATEGORY_LOGOS.get(category_key)
+    if isinstance(logo_data, Path):
+        return logo_data if logo_data.exists() else None
+    return logo_data  # Could be BytesIO or None
 
 
 async def clear_logo_message(
@@ -418,39 +436,27 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 @lru_cache(maxsize=1)
 def welcome_text() -> str:
-    catalog_items = [
-        'Canva',
-        'ChatGPT',
-        'Netflix',
-        'YouTube',
-        'Apple Music',
-        'Alight Motion',
-        'Wink',
-        'CapCut',
-        'GetContact',
-        'Zoom',
-        'Spotify',
-        'Duolingo',
-        'Google Drive',
-    ]
+    catalog_items = [data['title'] for data in PRODUCTS.values()][:12]
+    if not catalog_items:
+        catalog_items = ['Belum ada produk']
+
     catalog_box = make_text_box(
         [
             'Pilih produk yang kamu cari di bawah ini.',
             '',
             *[f"• {item}" for item in catalog_items],
         ],
-        title='Apps Tersedia',
+        title='KATALOG AKTIF',
     )
 
-    benefit_box = make_text_box(['• Harga santai', '• Paket lengkap', '• Bergaransi'], title='Kenapa Order Di Sini')
+    benefit_box = make_text_box(['• Proses Cepat', '• Aman & Legal', '• Garansi Full'], title='KEUNGGULAN')
 
     return (
-        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
-        '<i>Premium apps murah, aman, dan siap dipilih.</i>\n\n'
+        f"<b>♛ {escape(STORE_NAME.upper())} ♛</b>\n"
+        '<i>Solusi Premium Apps Murah & Terpercaya.</i>\n\n'
         f"<code>{escape(catalog_box)}</code>\n\n"
         f"<code>{escape(benefit_box)}</code>\n\n"
-        '<b>Butuh bantuan?</b>\n'
-        'Kalau ada yang mau ditanyakan, langsung DM aja ya bre.'
+        '<b>Klik tombol di bawah untuk melihat list lengkap!</b>'
     )
 
 
@@ -593,28 +599,24 @@ def make_text_box(lines: list[str], title: str | None = None) -> str:
 @lru_cache(maxsize=None)
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-    category_note_title = data.get('category_note_title', 'Catatan')
     sections = [
-        f"<b>{escape(data['icon'])} {escape(data['title'])}</b>",
+        f"<b>{escape(data['icon'])} {escape(data['title'].upper())}</b>",
         f"<i>{escape(data['description'])}</i>",
+        '━━━━━━━━━━━━━━━',
         '',
     ]
 
     for item in data['items']:
         box = make_text_box([
-            item['name'],
-            f"Durasi : {item['duration']}",
-            f"Harga  : {item['price']}",
+            f"ID: {item['id'].upper()}",
+            f"📦 {item['name']}",
+            f"⏳ {item['duration']}",
+            f"💰 {item['price']}",
         ])
         sections.append(f"<code>{escape(box)}</code>")
         sections.append('')
 
-    if data['category_notes']:
-        note_box = make_text_box([f"• {note}" for note in data['category_notes']], title=category_note_title)
-        sections.append(f"<code>{escape(note_box)}</code>")
-        sections.append('')
-
-    sections.append('<i>Tap paket di tombol bawah untuk lihat detail dan lanjut order.</i>')
+    sections.append('<i>Tap paket di tombol bawah untuk lanjut order.</i>')
     return '\n'.join(sections).strip()
 
 
@@ -782,22 +784,30 @@ async def send_view_message(
     reply_markup: InlineKeyboardMarkup | None = None,
     category_key: str | None = None,
 ) -> object:
-    logo_path = get_logo_path(category_key) if category_key else None
-    can_send_with_logo = bool(logo_path and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+    logo_data = get_logo_data(category_key) if category_key else None
+    can_send_with_logo = bool(logo_data and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
 
     if can_send_with_logo:
         try:
-            with logo_path.open('rb') as photo_file:
-                sent_message = await bot.send_photo(
-                    chat_id=chat_id,
-                    photo=photo_file,
-                    caption=text,
-                    reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML,
-                    disable_notification=True,
-                )
+            # Handle both Path and BytesIO
+            photo = logo_data
+            if isinstance(logo_data, BytesIO):
+                logo_data.seek(0)
+            
+            sent_message = await bot.send_photo(
+                chat_id=chat_id,
+                photo=photo,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                disable_notification=True,
+            )
             logger.info('Logo kategori %s berhasil dikirim ke chat %s.', category_key, chat_id)
             return sent_message
+        except Exception as e:
+            logger.error('Gagal mengirim photo: %s', e)
+            # Fallback to normal text message
+            pass
         except Exception:
             logger.warning(
                 'Gagal mengirim tampilan dengan logo untuk kategori %s. Fallback ke teks.',
