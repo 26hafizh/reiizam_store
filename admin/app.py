@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Form, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, JSONResponse
-from pydantic import BaseModel
+from dataclasses import dataclass, asdict
 import json
 import os
 from pathlib import Path
@@ -19,7 +19,8 @@ BASE_DIR = Path(__file__).parent
 PRODUCTS_PATH = BASE_DIR / 'products.json'
 CONFIG_PATH = BASE_DIR / 'config.json'
 
-class Config(BaseModel):
+@dataclass
+class Config:
     STORE_NAME: str
     WA_NUMBER: str
     RESTART_DELAY_SECONDS: int
@@ -27,13 +28,20 @@ class Config(BaseModel):
     ADMIN_USER: str = 'admin'
     ADMIN_PASS: str = 'admin'
 
-class Category(BaseModel):
+    def dict(self):
+        return asdict(self)
+
+@dataclass
+class Category:
     title: str
     icon: str
     description: str
     items: List[Dict[str, Any]]
-    category_notes: List[str] = []
+    category_notes: List[str]
     logo: str = ''
+
+    def dict(self):
+        return asdict(self)
 
 
 

@@ -10,6 +10,8 @@ from functools import lru_cache
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
+from io import BytesIO
+import base64
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction, ParseMode
@@ -119,9 +121,12 @@ def load_products():
         try:
             with open(products_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+                logger.info('Successfully loaded %d categories from products.json', len(data))
                 return data
         except Exception as e:
-            logger.warning('Failed to load products.json: %s', e)
+            logger.error('Failed to load products.json: %s', e)
+    else:
+        logger.warning('products.json not found at %s', products_path)
     return {}
 
 def load_config():
@@ -168,8 +173,6 @@ def reload_data_if_needed():
             if logo_val.startswith('data:image/'):
                 # Base64 logo
                 try:
-                    import base64
-                    from io import BytesIO
                     header, encoded = logo_val.split(',', 1)
                     CATEGORY_LOGOS[cat_key] = BytesIO(base64.b64decode(encoded))
                 except Exception as e:
@@ -202,7 +205,8 @@ def reload_data_if_needed():
                 if plain_name not in GENERIC_ITEM_ALIASES:
                     aliases.add(plain_name)
                 ITEM_ALIASES[item['id']] = aliases
-                
+        
+        logger.info('Data reloaded: %d items in %d categories.', len(ITEM_LOOKUP), len(PRODUCTS))
         needs_reload = True
         
     if needs_reload:
@@ -342,7 +346,7 @@ async def ensure_logo_message(
     user_id: int | None = None,
 ) -> None:
     chat_state = get_chat_state(context, chat_id, user_id)
-    if get_logo_path(category_key):
+    if get_logo_data(category_key):
         chat_state['logo_category_key'] = category_key
         return
     chat_state.pop('logo_category_key', None)
@@ -835,8 +839,8 @@ async def try_edit_query_message(
     if not message:
         return False
 
-    logo_path = get_logo_path(category_key) if category_key else None
-    target_is_photo = bool(logo_path and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+    logo_data = get_logo_data(category_key) if category_key else None
+    target_is_photo = bool(logo_data and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
     current_is_photo = bool(getattr(message, 'photo', None))
 
     try:
