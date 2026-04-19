@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Membuka WhatsApp</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             color-scheme: light dark;
@@ -150,31 +149,16 @@
     <script>
         const WEB_URL = {{ wa_url|tojson }};
         const ORDER_TEXT = {{ order_text|tojson }};
+        const AUTO_REDIRECT_KEY = `wa-redirect:${location.pathname}`;
         const statusNode = document.getElementById('status');
-        const telegramApp = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-        let isOpening = false;
 
         function setStatus(message) {
             statusNode.textContent = message;
         }
 
         function openWhatsApp() {
-            if (isOpening) {
-                return;
-            }
-
-            isOpening = true;
-            setStatus('Membuka WhatsApp...');
-
-            if (telegramApp && typeof telegramApp.openLink === 'function') {
-                telegramApp.openLink(WEB_URL);
-                window.setTimeout(() => {
-                    isOpening = false;
-                }, 900);
-                return;
-            }
-
-            window.location.href = WEB_URL;
+            setStatus('Mengalihkan ke WhatsApp...');
+            window.location.replace(WEB_URL);
         }
 
         async function copyOrderText() {
@@ -197,12 +181,12 @@
 
         document.getElementById('copy-order').addEventListener('click', copyOrderText);
 
-        if (telegramApp) {
-            telegramApp.ready();
-            telegramApp.expand();
+        if (!window.sessionStorage.getItem(AUTO_REDIRECT_KEY)) {
+            window.sessionStorage.setItem(AUTO_REDIRECT_KEY, '1');
+            window.setTimeout(openWhatsApp, 120);
+        } else {
+            setStatus('Jika WhatsApp belum terbuka, tekan tombol di atas.');
         }
-
-        window.setTimeout(openWhatsApp, 120);
     </script>
 </body>
 </html>

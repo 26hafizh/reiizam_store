@@ -10,7 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -385,20 +385,13 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
     launch_url = build_order_launch_url(item_id)
     order_button = (
-        InlineKeyboardButton('✅ Order via WhatsApp', web_app=WebAppInfo(url=launch_url))
+        InlineKeyboardButton('✅ Order via WhatsApp', url=launch_url)
         if launch_url
         else InlineKeyboardButton('✅ Order via WhatsApp', url=build_whatsapp_url(build_order_message(item_id)))
     )
     return InlineKeyboardMarkup(
         [
             [order_button],
-            [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
-            [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
-        ]
-    )
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton('✅ Order via WhatsApp', url=build_admin_url(build_order_message(item_id)))],
             [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
             [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
         ]
