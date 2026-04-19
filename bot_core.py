@@ -278,8 +278,11 @@ async def ensure_logo_message(
 def build_whatsapp_url(message: str | None = None) -> str:
     wa = WA_NUMBER()
     if not message:
-        return f'https://wa.me/{wa}'
-    return f'https://wa.me/{wa}?text={quote(message)}'
+        return f'https://api.whatsapp.com/send/?phone={wa}&type=phone_number&app_absent=0'
+    return (
+        'https://api.whatsapp.com/send/'
+        f'?phone={wa}&text={quote(message)}&type=phone_number&app_absent=0'
+    )
 
 
 def build_whatsapp_app_url(message: str | None = None) -> str:
@@ -383,15 +386,9 @@ def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
 @lru_cache(maxsize=None)
 def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
-    launch_url = build_order_launch_url(item_id)
-    order_button = (
-        InlineKeyboardButton('✅ Order via WhatsApp', url=launch_url)
-        if launch_url
-        else InlineKeyboardButton('✅ Order via WhatsApp', url=build_whatsapp_url(build_order_message(item_id)))
-    )
     return InlineKeyboardMarkup(
         [
-            [order_button],
+            [InlineKeyboardButton('✅ Order via WhatsApp', url=build_whatsapp_url(build_order_message(item_id)))],
             [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
             [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
         ]
