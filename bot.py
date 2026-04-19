@@ -69,7 +69,7 @@ def get_int_env(name: str, default: int) -> int:
 
 
 BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
-WA_NUMBER = os.getenv('WA_NUMBER', '6285126019233').strip()
+WA_NUMBER = os.getenv('WA_NUMBER', '62882000414738').strip()
 STORE_NAME = os.getenv('STORE_NAME', 'reiizam store').strip()
 RESTART_DELAY_SECONDS = max(get_int_env('RESTART_DELAY_SECONDS', 5), 1)
 IDLE_RESET_SECONDS = max(get_int_env('IDLE_RESET_SECONDS', 900), 60)
