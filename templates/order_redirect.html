@@ -138,7 +138,7 @@
         </section>
 
         <div class="actions">
-            <a id="open-app" class="button" href="{{ wa_app_url }}">Buka WhatsApp Sekarang</a>
+            <a id="open-app" class="button" href="{{ wa_url }}">Buka WhatsApp Sekarang</a>
             <a id="open-fallback" class="ghost" href="{{ wa_url }}">Link Cadangan</a>
             <button id="copy-order" class="ghost" type="button">Salin Format Order</button>
         </div>
@@ -148,24 +148,33 @@
     </main>
 
     <script>
-        const APP_URL = {{ wa_app_url|tojson }};
         const WEB_URL = {{ wa_url|tojson }};
         const ORDER_TEXT = {{ order_text|tojson }};
         const statusNode = document.getElementById('status');
+        const telegramApp = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        let isOpening = false;
 
         function setStatus(message) {
             statusNode.textContent = message;
         }
 
         function openWhatsApp() {
-            setStatus('Mencoba membuka aplikasi WhatsApp...');
-            window.location.replace(APP_URL);
-            window.setTimeout(() => {
-                if (document.visibilityState === 'visible') {
-                    setStatus('Mengalihkan ke link cadangan...');
-                    window.location.replace(WEB_URL);
-                }
-            }, 900);
+            if (isOpening) {
+                return;
+            }
+
+            isOpening = true;
+            setStatus('Membuka WhatsApp...');
+
+            if (telegramApp && typeof telegramApp.openLink === 'function') {
+                telegramApp.openLink(WEB_URL);
+                window.setTimeout(() => {
+                    isOpening = false;
+                }, 900);
+                return;
+            }
+
+            window.location.href = WEB_URL;
         }
 
         async function copyOrderText() {
@@ -188,7 +197,6 @@
 
         document.getElementById('copy-order').addEventListener('click', copyOrderText);
 
-        const telegramApp = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
         if (telegramApp) {
             telegramApp.ready();
             telegramApp.expand();

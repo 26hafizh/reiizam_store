@@ -23,4 +23,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Verify bot syntax
-        run: python -m py_compile bot.py
+        run: python -m py_compile main.py bot_core.py admin_routes.py shared_data.py
