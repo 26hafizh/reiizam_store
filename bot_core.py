@@ -208,10 +208,18 @@ def build_admin_url(message: str | None = None) -> str:
 
 def build_order_message(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
+    store = STORE_NAME()
     return (
-        'Hallo min, saya mau order.\n'
-        f"*{item['name']}* - *{item['duration']}* - *{item['price']}*\n"
-        'Apakah Stok Ready?😁.'
+        f"🚀 *FORM ORDER - {store.upper()}*\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "Halo Admin, saya ingin memesan paket berikut:\n\n"
+        f"📂 *Kategori:* {item['category_title']}\n"
+        f"📦 *Produk:* {item['name']}\n"
+        f"⏳ *Durasi:* {item['duration']}\n"
+        f"💰 *Harga:* {item['price']}\n"
+        f"🔑 *Kode:* {item['id'].upper()}\n\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "Apakah stok ready min? Mohon infonya ya, terima kasih! 🙏"
     )
 
 
@@ -284,23 +292,29 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 @lru_cache(maxsize=1)
 def welcome_text() -> str:
     catalog_items = [(data['icon'], data['title']) for data in PRODUCTS.values()][:12]
-    if not catalog_items:
-        catalog_list = ['  Belum ada produk']
-    else:
-        catalog_list = [f'  {icon} {title}' for icon, title in catalog_items]
-
     store = STORE_NAME()
+    
     lines = [
-        f'<b>♛ {escape(store.upper())} ♛</b>',
-        '<i>Solusi Premium Apps Murah &amp; Terpercaya</i>',
-        '',
-        '┌─────────── KATALOG ───────────┐',
-        *[f'│  {escape(item):<29}│' for item in catalog_list],
-        '└───────────────────────────────┘',
-        '',
-        '✦ <b>Proses Cepat</b>  •  <b>Aman &amp; Legal</b>  •  <b>Full Garansi</b>',
-        '',
-        '👇 <i>Tap tombol di bawah untuk mulai:</i>',
+        f"<b>✨ WELCOME TO {escape(store.upper())} ✨</b>",
+        "<i>Penyedia Layanan Premium Terlengkap & Terjangkau.</i>",
+        "",
+        "<b>💎 KATALOG PRODUK KAMI</b>",
+    ]
+    
+    if not catalog_items:
+        lines.append("<i>  • Belum ada produk tersedia</i>")
+    else:
+        for icon, title in catalog_items:
+            lines.append(f"  {icon} {escape(title)}")
+            
+    lines += [
+        "",
+        "<b>🚀 KEUNGGULAN KAMI:</b>",
+        "⚡ <i>Proses Kilat</i>",
+        "🛡️ <i>Legal & Bergaransi</i>",
+        "💰 <i>Harga Termurah</i>",
+        "",
+        "<b>Silakan pilih menu di bawah untuk mulai order!</b>"
     ]
     return '\n'.join(lines)
 
@@ -450,27 +464,21 @@ def format_category_text(category_key: str) -> str:
     items = data['items']
 
     lines = [
-        f'<b>{escape(icon)} {escape(title)}</b>',
-        f'<i>{escape(desc)}</i>',
-        '',
+        f"<b>{escape(icon)} {escape(title)} KATEGORI</b>",
+        f"<i>\"{escape(desc)}\"</i>",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "",
     ]
 
     for item in items:
-        price_tag = escape(item['price'])
-        name_tag  = escape(item['name'])
-        dur_tag   = escape(item['duration'])
-        id_tag    = item['id'].upper()
         lines += [
-            f'<code>┌───────────────────────┐</code>',
-            f'<code>│ {name_tag:<22}│</code>',
-            f'<code>│ ⏱ {dur_tag:<20}│</code>',
-            f'<code>│ 💰 {price_tag:<19}│</code>',
-            f'<code>│ 🔑 {id_tag:<19}│</code>',
-            f'<code>└───────────────────────┘</code>',
-            '',
+            f"📦 <b>{escape(item['name'])}</b>",
+            f"├ ⏳ Durasi: <code>{escape(item['duration'])}</code>",
+            f"└ 💰 Harga: <b>{escape(item['price'])}</b>",
+            "",
         ]
 
-    lines.append('<i>👇 Tap paket di tombol bawah untuk order.</i>')
+    lines.append("<i>👇 Pilih paket di bawah untuk detail & order:</i>")
     return '\n'.join(lines).strip()
 
 
@@ -479,41 +487,33 @@ def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
     category_data  = PRODUCTS[item['category_key']]
     category_notes = category_data.get('category_notes', [])
-    category_note_title = category_data.get('category_note_title', 'Catatan')
-
-    name  = escape(item['name'])
-    cat   = escape(item['category_title'])
-    dur   = escape(item['duration'])
-    price = escape(item['price'])
-    code  = item['id'].upper()
+    category_note_title = category_data.get('category_note_title', 'INFORMASI')
 
     lines = [
-        f'<b>🧾 Detail Paket</b>',
-        '',
-        f'<code>┌──────────────────────────────┐</code>',
-        f'<code>│ {name:<29}│</code>',
-        f'<code>├──────────────────────────────┤</code>',
-        f'<code>│ 📂 Kategori : {cat:<15}│</code>',
-        f'<code>│ ⏱  Durasi   : {dur:<15}│</code>',
-        f'<code>│ 💰 Harga    : {price:<15}│</code>',
-        f'<code>│ 🔑 Kode     : {code:<15}│</code>',
-        f'<code>└──────────────────────────────┘</code>',
-        '',
+        f"<b>📋 DETAIL PESANAN</b>",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"📂 <b>Kategori:</b> {escape(item['category_title'])}",
+        f"📦 <b>Produk:</b> {escape(item['name'])}",
+        f"⏳ <b>Durasi:</b> {escape(item['duration'])}",
+        f"💰 <b>Harga:</b> <b>{escape(item['price'])}</b>",
+        f"🔑 <b>Kode:</b> <code>{item['id'].upper()}</code>",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "",
     ]
 
     if item.get('notes'):
-        lines.append('<b>✨ Highlight:</b>')
+        lines.append("<b>✨ HIGHLIGHT:</b>")
         for note in item['notes']:
-            lines.append(f'  • {escape(note)}')
-        lines.append('')
+            lines.append(f"• <i>{escape(note)}</i>")
+        lines.append("")
 
     if category_notes:
-        lines.append(f'<b>📋 {escape(category_note_title)}:</b>')
+        lines.append(f"<b>⚠️ {escape(category_note_title).upper()}:</b>")
         for note in category_notes:
-            lines.append(f'  • {escape(note)}')
-        lines.append('')
+            lines.append(f"• <i>{escape(note)}</i>")
+        lines.append("")
 
-    lines.append('<i>✅ Tap tombol order untuk kirim format ke WhatsApp admin.</i>')
+    lines.append("<i>✅ Tap tombol di bawah untuk kirim format order ke WhatsApp.</i>")
     return '\n'.join(lines).strip()
 
 
