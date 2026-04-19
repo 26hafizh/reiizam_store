@@ -1,76 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-6 mb-4">
+<div class="row g-3">
+    <div class="col-12 mb-2">
+        <h2 class="fw-bold mb-0">Setelan</h2>
+        <p class="text-muted small">Kelola identitas toko dan keamanan akses.</p>
+    </div>
+
+    <!-- Shop Config -->
+    <div class="col-12 col-lg-6">
         <div class="card h-100">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-cog"></i> Konfigurasi Bot
-                </h5>
+            <div class="card-header d-flex align-items-center">
+                <i class="fa-solid fa-shop text-primary me-2"></i>
+                <h6 class="fw-bold mb-0">Profil Toko</h6>
             </div>
-            <div class="card-body">
-                <form id="configForm" method="POST" action="/config">
+            <div class="card-body p-4">
+                <form id="configForm">
                     <div class="mb-3">
-                        <label class="form-label">Nama Toko</label>
+                        <label class="form-label small fw-bold text-muted">NAMA TOKO</label>
                         <input type="text" class="form-control" name="store_name" value="{{ config.STORE_NAME }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nomor WhatsApp Admin</label>
-                        <input type="text" class="form-control" name="wa_number" value="{{ config.WA_NUMBER }}" required>
-                        <div class="form-text">Format: 628xxxxxxxxxx</div>
+                        <label class="form-label small fw-bold text-muted">WHATSAPP ADMIN</label>
+                        <input type="text" class="form-control" name="wa_number" value="{{ config.WA_NUMBER }}" placeholder="628xxxxxxxxxx" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Delay Restart (detik)</label>
-                        <input type="number" class="form-control" name="restart_delay" value="{{ config.RESTART_DELAY_SECONDS }}" required>
-                        <div class="form-text">Waktu tunggu sebelum bot restart setelah crash</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Idle Reset Timeout (detik)</label>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">IDLE TIMEOUT (DETIK)</label>
                         <input type="number" class="form-control" name="idle_reset" value="{{ config.IDLE_RESET_SECONDS }}" required>
-                        <div class="form-text">Waktu idle sebelum sesi di-reset (default: 900)</div>
+                        <div class="form-text text-muted extra-small mt-1">Sesi bot akan di-reset otomatis jika tidak aktif selama waktu ini.</div>
                     </div>
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Simpan Konfigurasi
-                        </button>
-                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fa-solid fa-save me-2"></i>Simpan Perubahan
+                    </button>
                 </form>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-6 mb-4">
+
+    <!-- Security -->
+    <div class="col-12 col-lg-6">
         <div class="card h-100">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-lock"></i> Ganti Password
-                </h5>
+            <div class="card-header d-flex align-items-center">
+                <i class="fa-solid fa-shield-halved text-warning me-2"></i>
+                <h6 class="fw-bold mb-0">Keamanan</h6>
             </div>
-            <div class="card-body">
-                {% if error %}
-                <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-20 text-danger small py-2">
-                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ error }}
-                </div>
-                {% endif %}
-                <form id="passwordForm" method="POST" action="/change_password">
+            <div class="card-body p-4">
+                <form id="passwordForm">
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" placeholder="Masukkan username saat ini" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password Lama</label>
+                        <label class="form-label small fw-bold text-muted">PASSWORD LAMA</label>
                         <input type="password" class="form-control" name="old_pass" placeholder="••••••••" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password Baru</label>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">PASSWORD BARU</label>
                         <input type="password" class="form-control" name="new_pass" placeholder="••••••••" required>
                     </div>
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; box-shadow: none;">
-                            <i class="fas fa-key"></i> Update Password
-                        </button>
-                    </div>
+                    <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, var(--warning), #d97706) !important;">
+                        <i class="fa-solid fa-key me-2"></i>Ganti Password
+                    </button>
                 </form>
             </div>
         </div>

@@ -1,213 +1,255 @@
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse, JSONResponse
-from dataclasses import dataclass, asdict
-from typing import Dict, Any, List
 from pathlib import Path
+from typing import Optional
 import shared_data
 
 router = APIRouter()
-BASE_DIR = Path(__file__).parent
-templates = Jinja2Templates(directory=str(BASE_DIR / 'templates'))
+templates = Jinja2Templates(directory=str(Path(__file__).parent / 'templates'))
 
-@dataclass
-class Category:
-    title: str
-    icon: str
-    description: str
-    items: List[Dict[str, Any]]
-    category_notes: List[str]
-    logo: str = ''
 
-    def dict(self):
-        return asdict(self)
+# ── Auth ──────────────────────────────────────────────
 
-def verify_auth(request: Request) -> bool:
-    # Check cookie-based auth first
-    auth_cookie = request.cookies.get('auth')
-    if auth_cookie == 'logged_in':
+def is_authed(request: Request) -> bool:
+    if request.cookies.get('auth') == 'ok':
         return True
-    
-    # Support Basic Auth for API calls
-    auth = request.headers.get('Authorization')
-    if auth and auth.startswith('Basic '):
+    auth = request.headers.get('Authorization', '')
+    if auth.startswith('Basic '):
         import base64
         try:
-            cred = base64.b64decode(auth[6:]).decode().split(':')
-            return cred[0] == shared_data.CONFIG.get('ADMIN_USER') and cred[1] == shared_data.CONFIG.get('ADMIN_PASS')
-        except:
-            return False
+            u, p = base64.b64decode(auth[6:]).decode().split(':', 1)
+            return u == shared_data.CONFIG.get('ADMIN_USER') and p == shared_data.CONFIG.get('ADMIN_PASS')
+        except Exception:
+            pass
     return False
 
-@router.get('/')
-async def dashboard(request: Request):
-    if not verify_auth(request):
-        return RedirectResponse(url='/login', status_code=302)
-    
-    num_categories = len(shared_data.PRODUCTS)
-    num_products = sum(len(cat.get('items', [])) for cat in shared_data.PRODUCTS.values())
-    
-    # We create an object-like view of CONFIG for the template
-    class ConfigView:
-        def __init__(self, d):
-            self.__dict__ = d
-    
-    return templates.TemplateResponse('dashboard.html', {
-        'request': request, 
-        'num_categories': num_categories, 
-        'num_products': num_products,
-        'config': ConfigView(shared_data.CONFIG)
-    })
+
+def need_login():
+    return RedirectResponse('/login', 302)
+
+
+# ── Pages ─────────────────────────────────────────────
 
 @router.get('/login')
 async def login_page(request: Request, logout: str = None):
-    response = templates.TemplateResponse('login.html', {'request': request})
+    resp = templates.TemplateResponse('login.html', {'request': request})
     if logout:
-        response.delete_cookie('auth')
-    return response
+        resp.delete_cookie('auth')
+    return resp
+
 
 @router.post('/login')
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    if username == shared_data.CONFIG.get('ADMIN_USER') and password == shared_data.CONFIG.get('ADMIN_PASS'):
-        response = RedirectResponse(url='/', status_code=302)
-        response.set_cookie('auth', 'logged_in', httponly=True, max_age=3600*24)
-        return response
+    cfg = shared_data.CONFIG
+    if username == cfg.get('ADMIN_USER') and password == cfg.get('ADMIN_PASS'):
+        resp = RedirectResponse('/', 302)
+        resp.set_cookie('auth', 'ok', httponly=True, max_age=86400)
+        return resp
     return templates.TemplateResponse('login.html', {'request': request, 'error': 'Username atau password salah'})
 
+
 @router.get('/logout')
-async def logout(request: Request):
-    response = RedirectResponse(url='/login?logout=1', status_code=302)
-    response.delete_cookie('auth')
-    return response
+async def logout():
+    resp = RedirectResponse('/login?logout=1', 302)
+    resp.delete_cookie('auth')
+    return resp
+
+
+@router.get('/')
+async def dashboard(request: Request):
+    if not is_authed(request):
+        return need_login()
+    p = shared_data.PRODUCTS
+    return templates.TemplateResponse('dashboard.html', {
+        'request': request,
+        'num_categories': len(p),
+        'num_products': sum(len(c.get('items', [])) for c in p.values()),
+        'config': shared_data.CONFIG,
+    })
+
 
 @router.get('/products')
 async def products_page(request: Request):
-    if not verify_auth(request):
-        return RedirectResponse(url='/login', status_code=302)
-    return templates.TemplateResponse('products.html', {'request': request, 'products': shared_data.PRODUCTS})
+    if not is_authed(request):
+        return need_login()
+    return templates.TemplateResponse('products.html', {
+        'request': request,
+        'products': shared_data.PRODUCTS,
+    })
 
-@router.post('/products/add_category')
-async def add_category(request: Request, title: str = Form(...), icon: str = Form(...), description: str = Form(...), logo: str = Form(None)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
-    key = title.lower().replace(' ', '_')
-    shared_data.PRODUCTS[key] = Category(title=title, icon=icon, description=description, items=[], category_notes=[], logo=logo or '').dict()
-    shared_data.save_products(shared_data.PRODUCTS)
-    return JSONResponse({'success': True})
 
-@router.post('/products/edit_category')
-async def edit_category(request: Request, key: str = Form(...), title: str = Form(...), icon: str = Form(...), description: str = Form(...), logo: str = Form(None)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
+@router.get('/config')
+async def config_page(request: Request):
+    if not is_authed(request):
+        return need_login()
+    return templates.TemplateResponse('config.html', {
+        'request': request,
+        'config': shared_data.CONFIG,
+    })
+
+
+# ── API: Categories ───────────────────────────────────
+
+@router.post('/api/category/add')
+async def api_add_category(request: Request,
+                           title: str = Form(...),
+                           icon: str = Form('📦'),
+                           description: str = Form(''),
+                           logo: str = Form('')):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
+
+    key = title.lower().replace(' ', '_').replace('-', '_')
     if key in shared_data.PRODUCTS:
-        shared_data.PRODUCTS[key]['title'] = title
-        shared_data.PRODUCTS[key]['icon'] = icon
-        shared_data.PRODUCTS[key]['description'] = description
-        shared_data.PRODUCTS[key]['logo'] = logo or ''
-        shared_data.save_products(shared_data.PRODUCTS)
-        return JSONResponse({'success': True})
-    return JSONResponse({'error': 'Category not found'}, status_code=404)
+        return JSONResponse({'error': 'Kategori sudah ada'}, 400)
 
-@router.post('/products/delete_category')
-async def delete_category(request: Request, key: str = Form(...)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
+    shared_data.PRODUCTS[key] = {
+        'title': title,
+        'icon': icon,
+        'description': description,
+        'items': [],
+        'category_notes': [],
+        'logo': logo,
+    }
+    shared_data.save_products(shared_data.PRODUCTS)
+    return JSONResponse({'ok': True, 'key': key})
+
+
+@router.post('/api/category/edit')
+async def api_edit_category(request: Request,
+                            key: str = Form(...),
+                            title: str = Form(...),
+                            icon: str = Form('📦'),
+                            description: str = Form(''),
+                            logo: str = Form('')):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
+    if key not in shared_data.PRODUCTS:
+        return JSONResponse({'error': 'Kategori tidak ditemukan'}, 404)
+
+    cat = shared_data.PRODUCTS[key]
+    cat['title'] = title
+    cat['icon'] = icon
+    cat['description'] = description
+    if logo:  # Only update logo if a new one is provided
+        cat['logo'] = logo
+    shared_data.save_products(shared_data.PRODUCTS)
+    return JSONResponse({'ok': True})
+
+
+@router.post('/api/category/delete')
+async def api_delete_category(request: Request, key: str = Form(...)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
     shared_data.PRODUCTS.pop(key, None)
     shared_data.save_products(shared_data.PRODUCTS)
-    return JSONResponse({'success': True})
+    return JSONResponse({'ok': True})
 
-@router.post('/products/add_item')
-async def add_item(request: Request, cat_key: str = Form(...), item_id: str = Form(...), name: str = Form(...), duration: str = Form(...), price: str = Form(...)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
+
+# ── API: Items ────────────────────────────────────────
+
+@router.post('/api/item/add')
+async def api_add_item(request: Request,
+                       cat_key: str = Form(...),
+                       item_id: str = Form(...),
+                       name: str = Form(...),
+                       duration: str = Form(...),
+                       price: str = Form(...)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
     if cat_key not in shared_data.PRODUCTS:
-        return JSONResponse({'error': 'Category not found'}, status_code=400)
-    
-    new_item = {'id': item_id, 'name': name, 'duration': duration, 'price': price, 'notes': []}
-    shared_data.PRODUCTS[cat_key]['items'].append(new_item)
+        return JSONResponse({'error': 'Kategori tidak ditemukan'}, 400)
+
+    # Check duplicate ID
+    for item in shared_data.PRODUCTS[cat_key]['items']:
+        if item['id'] == item_id:
+            return JSONResponse({'error': f'Item ID "{item_id}" sudah ada'}, 400)
+
+    shared_data.PRODUCTS[cat_key]['items'].append({
+        'id': item_id, 'name': name, 'duration': duration, 'price': price, 'notes': []
+    })
     shared_data.save_products(shared_data.PRODUCTS)
-    return JSONResponse({'success': True})
+    return JSONResponse({'ok': True})
 
-@router.post('/products/delete_item')
-async def delete_item(request: Request, cat_key: str = Form(...), item_id: str = Form(...)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
-    if cat_key not in shared_data.PRODUCTS:
-        return JSONResponse({'error': 'Category not found'}, status_code=400)
-    
-    shared_data.PRODUCTS[cat_key]['items'] = [item for item in shared_data.PRODUCTS[cat_key]['items'] if item['id'] != item_id]
-    shared_data.save_products(shared_data.PRODUCTS)
-    return JSONResponse({'success': True})
 
-@router.post('/products/edit_item')
-async def edit_item(request: Request, cat_key: str = Form(...), item_id: str = Form(...), name: str = Form(...), duration: str = Form(...), price: str = Form(...)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
+@router.post('/api/item/edit')
+async def api_edit_item(request: Request,
+                        cat_key: str = Form(...),
+                        item_id: str = Form(...),
+                        name: str = Form(...),
+                        duration: str = Form(...),
+                        price: str = Form(...)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
     if cat_key not in shared_data.PRODUCTS:
-        return JSONResponse({'error': 'Category not found'}, status_code=400)
-    
+        return JSONResponse({'error': 'Kategori tidak ditemukan'}, 400)
+
     for item in shared_data.PRODUCTS[cat_key]['items']:
         if item['id'] == item_id:
             item['name'] = name
             item['duration'] = duration
             item['price'] = price
-            break
-            
+            shared_data.save_products(shared_data.PRODUCTS)
+            return JSONResponse({'ok': True})
+
+    return JSONResponse({'error': 'Item tidak ditemukan'}, 404)
+
+
+@router.post('/api/item/delete')
+async def api_delete_item(request: Request,
+                          cat_key: str = Form(...),
+                          item_id: str = Form(...)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
+    if cat_key not in shared_data.PRODUCTS:
+        return JSONResponse({'error': 'Kategori tidak ditemukan'}, 400)
+
+    shared_data.PRODUCTS[cat_key]['items'] = [
+        i for i in shared_data.PRODUCTS[cat_key]['items'] if i['id'] != item_id
+    ]
     shared_data.save_products(shared_data.PRODUCTS)
-    return JSONResponse({'success': True})
+    return JSONResponse({'ok': True})
 
-@router.get('/config')
-async def config_page(request: Request):
-    if not verify_auth(request):
-        return RedirectResponse(url='/login', status_code=302)
-        
-    class ConfigView:
-        def __init__(self, d):
-            self.__dict__ = d
-            
-    return templates.TemplateResponse('config.html', {'request': request, 'config': ConfigView(shared_data.CONFIG)})
 
-@router.post('/config')
-async def save_config_page(request: Request, store_name: str = Form(...), wa_number: str = Form(...), restart_delay: int = Form(...), idle_reset: int = Form(...)):
-    if not verify_auth(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-    
-    new_config = {
-        'STORE_NAME': store_name, 
-        'WA_NUMBER': wa_number, 
-        'RESTART_DELAY_SECONDS': restart_delay, 
-        'IDLE_RESET_SECONDS': idle_reset
-    }
-    shared_data.save_config(new_config)
-    return RedirectResponse(url='/config', status_code=302)
+# ── API: Config ───────────────────────────────────────
 
-@router.post('/change_password')
-async def change_password(request: Request, username: str = Form(...), old_pass: str = Form(...), new_pass: str = Form(...)):
-    if not verify_auth(request):
-        return RedirectResponse(url='/login', status_code=302)
-    
-    if username == shared_data.CONFIG.get('ADMIN_USER') and old_pass == shared_data.CONFIG.get('ADMIN_PASS'):
-        shared_data.save_config({'ADMIN_PASS': new_pass})
-        response = RedirectResponse(url='/login?logout=1', status_code=302)
-        response.delete_cookie('auth')
-        return response
-    
-    class ConfigView:
-        def __init__(self, d):
-            self.__dict__ = d
-            
-    return templates.TemplateResponse('config.html', {
-        'request': request, 
-        'config': ConfigView(shared_data.CONFIG), 
-        'error': 'Username atau password lama salah'
+@router.post('/api/config/save')
+async def api_save_config(request: Request,
+                          store_name: str = Form(...),
+                          wa_number: str = Form(...),
+                          idle_reset: int = Form(900)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
+
+    shared_data.save_config({
+        'STORE_NAME': store_name,
+        'WA_NUMBER': wa_number,
+        'IDLE_RESET_SECONDS': max(idle_reset, 60),
     })
+    return JSONResponse({'ok': True})
 
-@router.get('/export')
-async def export():
+
+@router.post('/api/config/password')
+async def api_change_password(request: Request,
+                              old_pass: str = Form(...),
+                              new_pass: str = Form(...)):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
+
+    if old_pass != shared_data.CONFIG.get('ADMIN_PASS'):
+        return JSONResponse({'error': 'Password lama salah'}, 400)
+
+    shared_data.save_config({'ADMIN_PASS': new_pass})
+    resp = JSONResponse({'ok': True, 'message': 'Password berhasil diubah. Silakan login ulang.'})
+    resp.delete_cookie('auth')
+    return resp
+
+
+# ── API: Export ───────────────────────────────────────
+
+@router.get('/api/export')
+async def api_export(request: Request):
+    if not is_authed(request):
+        return JSONResponse({'error': 'Unauthorized'}, 401)
     return JSONResponse({'products': shared_data.PRODUCTS, 'config': shared_data.CONFIG})

@@ -1,137 +1,128 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
-
 :root {
-    --primary: #10b981;
-    --primary-hover: #059669;
-    --bg-dark: #0f172a;
-    --card-bg: #1e293b;
-    --text-main: #f8fafc;
-    --text-muted: #cbd5e1;
-    --border: #334155;
+    --bg-dark: #0f1115;
+    --card-bg: #1a1d23;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     font-family: 'Outfit', sans-serif;
-    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
 }
 
-h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-    color: var(--text-main) !important;
-}
-
-label, .form-label {
-    color: var(--text-main) !important;
-}
-
-.text-muted {
-    color: var(--text-muted) !important;
-}
-
-.navbar {
-    background: var(--card-bg) !important;
-    border-bottom: 1px solid var(--border);
-    padding: 1rem 0;
-}
-
-.navbar-brand {
-    font-size: 1.5rem;
-    background: linear-gradient(to right, #34d399, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 700;
-}
-
+/* Glassmorphism Cards */
 .card {
-    background: var(--card-bg) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 0.75rem;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
     overflow: hidden;
-    color: var(--text-main);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.input-group-text {
-    background: var(--bg-dark) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text-muted) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .card-header {
-    background: var(--card-bg) !important;
-    border-bottom: 1px solid var(--border) !important;
-    padding: 1rem 1.25rem !important;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 1.25rem;
 }
 
-.card-title {
-    font-weight: 600;
-}
-
-.form-control, .form-select {
-    background: var(--bg-dark) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text-main) !important;
-    border-radius: 0.5rem;
-    padding: 0.6rem 1rem;
-}
-
-.form-control:focus {
-    background: var(--bg-dark) !important;
-    box-shadow: 0 0 0 2px var(--primary);
-    border-color: var(--primary) !important;
-}
-
+/* Premium Buttons */
 .btn-primary {
-    background: var(--primary) !important;
-    border: none !important;
-    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
     font-weight: 600;
-    border-radius: 0.5rem;
-    color: #ffffff !important;
+    transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-    background: var(--primary-hover) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
 }
 
-.table {
-    color: var(--text-main) !important;
+.btn-logout {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 10px;
 }
 
-.table th {
-    background: transparent !important;
-    border-bottom: 2px solid var(--border) !important;
+/* Mobile Navigation */
+.mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(26, 29, 35, 0.9);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+}
+
+.nav-link-custom {
     color: var(--text-muted);
-    font-weight: 500;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.05em;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 10px;
+    transition: 0.3s;
 }
 
-.table td {
-    vertical-align: middle;
-    border-bottom: 1px solid var(--border) !important;
+.nav-link-custom i {
+    font-size: 20px;
+    margin-bottom: 4px;
 }
 
-.badge {
-    padding: 0.5em 0.8em;
-    border-radius: 0.5rem;
-    font-weight: 500;
+.nav-link-custom.active {
+    color: var(--accent-blue);
 }
 
-.product-card {
-    border: 1px solid var(--border);
-    background: var(--bg-dark) !important;
+/* Form Styling */
+.form-control {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    color: white;
+    border-radius: 10px;
+    padding: 0.75rem;
 }
 
-.btn-outline-light {
-    border-color: var(--border) !important;
+.form-control:focus {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.1);
+    color: white;
 }
 
-.btn-outline-light:hover {
-    background: var(--border) !important;
-    color: var(--text-main) !important;
+/* Product Cards for Mobile */
+.item-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.category-badge {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+    color: var(--accent-blue);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 /* Animations */
@@ -140,21 +131,6 @@ label, .form-label {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.container {
-    opacity: 1 !important;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-track {
-    background: var(--bg-dark);
-}
-::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+.main-container {
+    animation: fadeIn 0.4s ease-out;
 }

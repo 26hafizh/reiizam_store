@@ -1,124 +1,93 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row g-4">
-    <!-- Sidebar: Add Category -->
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
-                <h5 class="mb-0 fw-bold"><i class="fas fa-folder-plus me-2 text-primary"></i>Tambah Kategori</h5>
-            </div>
-            <div class="card-body">
-                <form id="addCategoryForm">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Nama Kategori</label>
-                        <input type="text" class="form-control" name="title" placeholder="Misal: Netflix Premium" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Icon</label>
-                        <input type="text" class="form-control" name="icon" placeholder="📺">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Deskripsi Singkat</label>
-                        <textarea class="form-control" name="description" rows="2" placeholder="Penjelasan singkat kategori..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Logo Kategori (Opsional)</label>
-                        <input type="file" class="form-control" name="logo_file" id="addCatLogoFile" accept="image/*">
-                        <input type="hidden" name="logo" id="addCatLogoBase64">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
-                        <i class="fas fa-plus me-2"></i>Buat Kategori
-                    </button>
-                </form>
-            </div>
+<div class="row g-3">
+    <!-- Page Title & Add Button -->
+    <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <h2 class="fw-bold mb-0">Manajemen Produk</h2>
+            <p class="text-muted small">Kelola kategori dan item produk Anda.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAddCategory()">
+            <i class="fa-solid fa-folder-plus"></i>
+        </button>
+    </div>
+
+    <!-- Category Tabs/Filters (Scrollable on mobile) -->
+    <div class="col-12 overflow-x-auto pb-2">
+        <div class="d-flex gap-2" id="categoryNav">
+            <button class="btn btn-outline-light border-secondary active" onclick="showCategory('all', this)">Semua</button>
+            {% for key, cat in products.items() %}
+            <button class="btn btn-outline-light border-secondary text-nowrap" onclick="showCategory('{{ key }}', this)">
+                {{ cat.icon }} {{ cat.title }}
+            </button>
+            {% endfor %}
         </div>
     </div>
-    
-    <!-- Main: Product List -->
-    <div class="col-lg-8">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0 fw-bold">Daftar Produk</h4>
-            <span class="badge bg-primary rounded-pill px-3">{{ products|length }} Kategori Aktif</span>
-        </div>
 
-        {% if not products %}
-        <div class="card border-dashed border-2 bg-transparent py-5 text-center">
-            <div class="card-body">
-                <i class="fas fa-box-open fs-1 text-muted mb-3"></i>
-                <h5 class="text-muted">Belum ada kategori produk</h5>
-                <p class="small text-muted">Gunakan form di samping untuk mulai menambahkan kategori.</p>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="row g-4">
-            {% for key, category in products.items() %}
-            <div class="col-12">
-                <div class="card product-card border-0 shadow-sm">
-                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 border-bottom border-secondary border-opacity-10">
+    <!-- Product Grid -->
+    <div class="col-12 mt-3">
+        <div class="row g-3" id="productsGrid">
+            {% for cat_key, cat in products.items() %}
+            <!-- Category Header -->
+            <div class="col-12 category-section" data-key="{{ cat_key }}">
+                <div class="card p-3 border-secondary border-opacity-25 bg-black bg-opacity-20 mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
-                            {% if category.logo %}
-                            <img src="{{ category.logo }}" alt="Logo" class="rounded me-3" style="width: 40px; height: 40px; object-fit: cover;">
-                            {% else %}
-                            <span class="fs-4 me-3">{{ category.icon }}</span>
-                            {% endif %}
+                            <span class="fs-3 me-3">{{ cat.icon }}</span>
                             <div>
-                                <h6 class="mb-0 fw-bold">{{ category.title }}</h6>
-                                <small class="text-muted">{{ category.description }}</small>
+                                <h5 class="fw-bold mb-0 text-white">{{ cat.title }}</h5>
+                                <small class="text-muted">{{ cat.items|length }} Item tersedia</small>
                             </div>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary px-3" onclick="addProduct('{{ key }}')" title="Tambah Item">
-                                <i class="fas fa-plus me-1"></i> Item
+                        <div class="dropdown">
+                            <button class="btn btn-icon text-muted" data-bs-toggle="dropdown">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-warning px-3" onclick="openEditCategory('{{ key }}', '{{ category.title }}', '{{ category.icon }}', '{{ category.description }}', '{{ category.logo }}')" title="Edit Kategori">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger px-3" onclick="deleteCategory('{{ key }}')" title="Hapus Kategori">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="openEditCategory('{{ cat_key }}', '{{ cat.title }}', '{{ cat.icon }}', '{{ cat.description }}', '{{ cat.logo }}')">
+                                    <i class="fa-solid fa-edit me-2"></i>Edit Kategori</a>
+                                </li>
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="openAddItem('{{ cat_key }}')">
+                                    <i class="fa-solid fa-plus-circle me-2"></i>Tambah Item</a>
+                                </li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteCategory('{{ cat_key }}')">
+                                    <i class="fa-solid fa-trash me-2"></i>Hapus Kategori</a>
+                                </li>
+                            </ul>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        {% if category['items'] %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle">
-                                <thead class="table-dark bg-opacity-50">
-                                    <tr>
-                                        <th class="ps-4" style="width: 80px;">ID</th>
-                                        <th>Nama Produk</th>
-                                        <th>Durasi</th>
-                                        <th>Harga</th>
-                                        <th class="text-end pe-4">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in category['items'] %}
-                                    <tr class="border-bottom border-secondary border-opacity-10">
-                                        <td class="ps-4"><code class="text-info">{{ item.id }}</code></td>
-                                        <td class="fw-semibold">{{ item.name }}</td>
-                                        <td><span class="badge bg-secondary bg-opacity-25 text-main fw-normal">{{ item.duration }}</span></td>
-                                        <td class="text-success fw-bold">{{ item.price }}</td>
-                                        <td class="text-end pe-4">
-                                            <button class="btn btn-icon-sm btn-outline-warning me-1" onclick="editProduct('{{ key }}', '{{ item.id }}', '{{ item.name }}', '{{ item.duration }}', '{{ item.price }}')">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-icon-sm btn-outline-danger" onclick="deleteProduct('{{ key }}', '{{ item.id }}')">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                </div>
+
+                <div class="row g-2">
+                    {% for item in cat.items %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card p-3 h-100 product-item-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="category-badge">{{ item.duration }}</div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-icon text-muted" data-bs-toggle="dropdown">
+                                        <i class="fa-solid fa-ellipsis"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="openEditItem('{{ cat_key }}', '{{ item.id }}', '{{ item.name }}', '{{ item.duration }}', '{{ item.price }}')">
+                                            <i class="fa-solid fa-pen-to-square me-2"></i>Edit</a>
+                                        </li>
+                                        <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteItem('{{ cat_key }}', '{{ item.id }}')">
+                                            <i class="fa-solid fa-trash-can me-2"></i>Hapus</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">{{ item.name }}</h6>
+                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2">
+                                <span class="text-success fw-bold">{{ item.price }}</span>
+                                <code class="text-muted small">{{ item.id }}</code>
+                            </div>
                         </div>
-                        {% else %}
-                        <div class="p-4 text-center">
-                            <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Belum ada item dalam kategori ini.</p>
-                        </div>
-                        {% endif %}
                     </div>
+                    {% endfor %}
                 </div>
             </div>
             {% endfor %}
@@ -126,97 +95,99 @@
     </div>
 </div>
 
-<!-- Modal Tambah/Edit Produk (Dark Styled) -->
-<div class="modal fade" id="productModal" tabindex="-1">
+<!-- Modal Kategori -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border-secondary">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title fw-bold text-white">Tambah Item Baru</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="catModalTitle">Kategori Baru</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="productForm">
-                    <input type="hidden" name="cat_key" id="modalCatKey">
+                <form id="catForm">
+                    <input type="hidden" name="key" id="catKey">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">ID Produk</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="item_id" id="modalItemId" placeholder="Misal: nflx_1m" required>
+                        <label class="form-label small fw-bold text-muted">NAMA KATEGORI</label>
+                        <input type="text" class="form-control" name="title" id="catTitle" placeholder="Misal: Netflix Premium" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-muted">ICON</label>
+                            <input type="text" class="form-control text-center" name="icon" id="catIcon" placeholder="📺" required>
+                        </div>
+                        <div class="col-8">
+                            <label class="form-label small fw-bold text-muted">LOGO URL / BASE64</label>
+                            <input type="text" class="form-control" name="logo" id="catLogo" placeholder="Kosongkan jika tidak ada">
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Nama Item</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="name" id="modalName" placeholder="Misal: Netflix 1 Bulan" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Durasi</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="duration" id="modalDuration" placeholder="Misal: 30 Hari" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Harga</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="price" id="modalPrice" placeholder="Misal: Rp 35.000" required>
+                        <label class="form-label small fw-bold text-muted">DESKRIPSI SINGKAT</label>
+                        <textarea class="form-control" name="description" id="catDescription" rows="2"></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-outline-light px-4" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="saveProduct()">Simpan Item</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" onclick="saveCategory()">Simpan Kategori</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Edit Kategori -->
-<div class="modal fade" id="categoryEditModal" tabindex="-1">
+<!-- Modal Item -->
+<div class="modal fade" id="itemModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border-secondary">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title fw-bold text-white">Edit Kategori</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="itemModalTitle">Item Baru</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="categoryEditForm">
-                    <input type="hidden" name="key" id="editCatKey">
+                <form id="itemForm">
+                    <input type="hidden" name="cat_key" id="itemCatKey">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Nama Kategori</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="title" id="editCatTitle" required>
+                        <label class="form-label small fw-bold text-muted">ID PRODUK (UNIK)</label>
+                        <input type="text" class="form-control" name="item_id" id="itemId" placeholder="Misal: nflx_1m" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Icon</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" name="icon" id="editCatIcon" required>
+                        <label class="form-label small fw-bold text-muted">NAMA PAKET</label>
+                        <input type="text" class="form-control" name="name" id="itemName" placeholder="Misal: Netflix 4K UHD" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Deskripsi</label>
-                        <textarea class="form-control bg-dark text-white border-secondary" name="description" id="editCatDescription" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Logo Kategori</label>
-                        <input type="file" class="form-control bg-dark text-white border-secondary" id="editCatLogoFile" accept="image/*">
-                        <input type="hidden" name="logo" id="editCatLogoBase64">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">DURASI</label>
+                            <input type="text" class="form-control" name="duration" id="itemDuration" placeholder="30 Hari" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">HARGA</label>
+                            <input type="text" class="form-control" name="price" id="itemPrice" placeholder="Rp 35.000" required>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-outline-light px-4" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="saveCategoryEdit()">Update Kategori</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" onclick="saveItem()">Simpan Item</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.btn-icon-sm {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    font-size: 0.85rem;
+.btn-icon {
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 8px;
 }
-.text-main {
-    color: var(--text-main);
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
-.border-dashed {
-    border-style: dashed !important;
+.product-item-card {
+    transition: all 0.2s;
+    cursor: default;
+}
+.product-item-card:hover {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--accent-blue);
 }
 </style>
 {% endblock %}

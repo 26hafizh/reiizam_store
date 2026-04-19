@@ -1,226 +1,139 @@
 // ===================================================
-// REIIZAM ADMIN PANEL - SCRIPT
+// REIIZAM ADMIN - PREMIUM SCRIPT
 // ===================================================
 
-// Helper: Convert File to Base64
-function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
-
-// Helper: Send form data via POST
-async function postForm(url, data) {
-    const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(data)
-    });
-    if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${resp.status}`);
-    }
-    return resp.json();
-}
-
-// Helper: Show toast notification
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow-lg`;
-    toast.style.zIndex = '9999';
-    toast.style.minWidth = '250px';
-    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}`;
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.remove(); location.reload(); }, 1200);
-}
-
-// ===================================================
-// LOGO FILE LISTENERS (Add & Edit Category)
-// ===================================================
-
-document.addEventListener('change', async (e) => {
-    if (e.target.id === 'addCatLogoFile') {
-        const file = e.target.files[0];
-        if (file) {
-            document.getElementById('addCatLogoBase64').value = await toBase64(file);
-        }
-    }
-    if (e.target.id === 'editCatLogoFile') {
-        const file = e.target.files[0];
-        if (file) {
-            document.getElementById('editCatLogoBase64').value = await toBase64(file);
-        }
-    }
-});
-
-// ===================================================
-// ADD CATEGORY
-// ===================================================
-
-document.getElementById('addCategoryForm')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = new FormData(this);
-    try {
-        await postForm('/products/add_category', {
-            title: form.get('title'),
-            icon: form.get('icon') || '📦',
-            description: form.get('description') || '',
-            logo: document.getElementById('addCatLogoBase64').value || ''
+const API = {
+    post: async (url, data) => {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(data)
         });
-        showToast('Kategori berhasil ditambahkan!');
-    } catch (err) {
-        alert('Gagal: ' + err.message);
+        const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || 'Terjadi kesalahan');
+        return result;
     }
-});
+};
 
-// ===================================================
-// EDIT CATEGORY (Modal)
-// ===================================================
+const toast = (msg, type = 'success') => {
+    const el = document.createElement('div');
+    el.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x m-3 shadow-lg border-0`;
+    el.style.zIndex = '9999';
+    el.style.minWidth = '280px';
+    el.innerHTML = `<div class="d-flex align-items-center"><i class="fa-solid fa-${type==='success'?'check-circle':'triangle-exclamation'} me-2"></i><b>${msg}</b></div>`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.remove(); location.reload(); }, 1200);
+};
+
+// ── Kategori ──────────────────────────────────────────
 
 let categoryModal;
-
-function openEditCategory(key, title, icon, description, logo) {
-    document.getElementById('editCatKey').value = key;
-    document.getElementById('editCatTitle').value = title;
-    document.getElementById('editCatIcon').value = icon;
-    document.getElementById('editCatDescription').value = description;
-    document.getElementById('editCatLogoBase64').value = logo || '';
-    document.getElementById('editCatLogoFile').value = '';
-    
-    if (!categoryModal) {
-        categoryModal = new bootstrap.Modal(document.getElementById('categoryEditModal'));
-    }
+const openAddCategory = () => {
+    categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+    document.getElementById('catForm').reset();
+    document.getElementById('catKey').value = '';
+    document.getElementById('catModalTitle').innerText = 'Kategori Baru';
     categoryModal.show();
-}
+};
 
-async function saveCategoryEdit() {
-    const form = document.getElementById('categoryEditForm');
-    const formData = new FormData(form);
-    
+const openEditCategory = (key, title, icon, description, logo) => {
+    categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+    document.getElementById('catKey').value = key;
+    document.getElementById('catTitle').value = title;
+    document.getElementById('catIcon').value = icon;
+    document.getElementById('catDescription').value = description;
+    document.getElementById('catLogo').value = logo;
+    document.getElementById('catModalTitle').innerText = 'Edit Kategori';
+    categoryModal.show();
+};
+
+const saveCategory = async () => {
+    const f = new FormData(document.getElementById('catForm'));
+    const data = Object.fromEntries(f.entries());
+    const url = data.key ? '/api/category/edit' : '/api/category/add';
     try {
-        await postForm('/products/edit_category', {
-            key: formData.get('key'),
-            title: formData.get('title'),
-            icon: formData.get('icon'),
-            description: formData.get('description'),
-            logo: document.getElementById('editCatLogoBase64').value || ''
-        });
-        categoryModal.hide();
-        showToast('Kategori berhasil diperbarui!');
-    } catch (err) {
-        alert('Gagal: ' + err.message);
-    }
-}
+        await API.post(url, data);
+        toast('Kategori berhasil disimpan!');
+    } catch (e) { alert(e.message); }
+};
 
-// ===================================================
-// DELETE CATEGORY
-// ===================================================
+const deleteCategory = async (key) => {
+    if (!confirm('Hapus kategori ini? Semua produk di dalamnya akan ikut terhapus.')) return;
+    try {
+        await API.post('/api/category/delete', { key });
+        toast('Kategori berhasil dihapus!');
+    } catch (e) { alert(e.message); }
+};
 
-function deleteCategory(catKey) {
-    if (!confirm('Yakin ingin menghapus kategori ini beserta semua item di dalamnya?')) return;
-    
-    postForm('/products/delete_category', { key: catKey })
-        .then(() => showToast('Kategori berhasil dihapus!'))
-        .catch(err => alert('Gagal: ' + err.message));
-}
+// ── Item ──────────────────────────────────────────────
 
-// ===================================================
-// ADD / EDIT ITEM (Shared Modal)
-// ===================================================
+let itemModal;
+const openAddItem = (catKey) => {
+    itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+    document.getElementById('itemForm').reset();
+    document.getElementById('itemCatKey').value = catKey;
+    document.getElementById('itemId').readOnly = false;
+    document.getElementById('itemModalTitle').innerText = 'Item Baru';
+    itemModal.show();
+};
 
-let productModal;
-let currentMode = 'add';  // 'add' or 'edit'
+const openEditItem = (catKey, id, name, dur, price) => {
+    itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+    document.getElementById('itemCatKey').value = catKey;
+    document.getElementById('itemId').value = id;
+    document.getElementById('itemId').readOnly = true;
+    document.getElementById('itemName').value = name;
+    document.getElementById('itemDuration').value = dur;
+    document.getElementById('itemPrice').value = price;
+    document.getElementById('itemModalTitle').innerText = 'Edit Item';
+    itemModal.show();
+};
 
-function addProduct(catKey) {
-    currentMode = 'add';
-    
-    // Reset form
-    document.getElementById('productForm').reset();
-    document.getElementById('modalCatKey').value = catKey;
-    document.getElementById('modalItemId').readOnly = false;
-    
-    // Update modal title
-    document.querySelector('#productModal .modal-title').textContent = 'Tambah Item Baru';
-    document.querySelector('#productModal .modal-footer .btn-primary').textContent = 'Simpan Item';
-    
-    if (!productModal) {
-        productModal = new bootstrap.Modal(document.getElementById('productModal'));
-    }
-    productModal.show();
-}
+const saveItem = async () => {
+    const f = new FormData(document.getElementById('itemForm'));
+    const data = Object.fromEntries(f.entries());
+    const isEdit = document.getElementById('itemId').readOnly;
+    const url = isEdit ? '/api/item/edit' : '/api/item/add';
+    try {
+        await API.post(url, data);
+        toast('Item berhasil disimpan!');
+    } catch (e) { alert(e.message); }
+};
 
-function editProduct(catKey, itemId, name, duration, price) {
-    currentMode = 'edit';
-    
-    // Fill form with existing data
-    document.getElementById('modalCatKey').value = catKey;
-    document.getElementById('modalItemId').value = itemId;
-    document.getElementById('modalItemId').readOnly = true;  // ID tidak bisa diubah saat edit
-    document.getElementById('modalName').value = name;
-    document.getElementById('modalDuration').value = duration;
-    document.getElementById('modalPrice').value = price;
-    
-    // Update modal title
-    document.querySelector('#productModal .modal-title').textContent = 'Edit Item';
-    document.querySelector('#productModal .modal-footer .btn-primary').textContent = 'Update Item';
-    
-    if (!productModal) {
-        productModal = new bootstrap.Modal(document.getElementById('productModal'));
-    }
-    productModal.show();
-}
+const deleteItem = async (cat_key, item_id) => {
+    if (!confirm('Hapus item ini?')) return;
+    try {
+        await API.post('/api/item/delete', { cat_key, item_id });
+        toast('Item berhasil dihapus!');
+    } catch (e) { alert(e.message); }
+};
 
-function saveProduct() {
-    const form = document.getElementById('productForm');
-    
-    // Validate
-    const itemId = document.getElementById('modalItemId').value.trim();
-    const name = document.getElementById('modalName').value.trim();
-    const duration = document.getElementById('modalDuration').value.trim();
-    const price = document.getElementById('modalPrice').value.trim();
-    const catKey = document.getElementById('modalCatKey').value;
-    
-    if (!itemId || !name || !duration || !price) {
-        alert('Semua field harus diisi!');
-        return;
-    }
-    
-    const endpoint = currentMode === 'add' ? '/products/add_item' : '/products/edit_item';
-    
-    postForm(endpoint, {
-        cat_key: catKey,
-        item_id: itemId,
-        name: name,
-        duration: duration,
-        price: price
-    })
-    .then(() => {
-        productModal.hide();
-        showToast(currentMode === 'add' ? 'Item berhasil ditambahkan!' : 'Item berhasil diperbarui!');
-    })
-    .catch(err => alert('Gagal: ' + err.message));
-}
+// ── Config ────────────────────────────────────────────
 
-// ===================================================
-// DELETE ITEM
-// ===================================================
+document.getElementById('configForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await API.post('/api/config/save', Object.fromEntries(new FormData(e.target)));
+        toast('Konfigurasi disimpan!');
+    } catch (e) { alert(e.message); }
+});
 
-function deleteProduct(catKey, itemId) {
-    if (!confirm('Yakin ingin menghapus item ini?')) return;
+document.getElementById('passwordForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        const res = await API.post('/api/config/password', Object.fromEntries(new FormData(e.target)));
+        toast(res.message);
+    } catch (e) { alert(e.message); }
+});
+
+// ── UI Helpers ────────────────────────────────────────
+
+const showCategory = (key, btn) => {
+    document.querySelectorAll('#categoryNav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     
-    postForm('/products/delete_item', { cat_key: catKey, item_id: itemId })
-        .then(() => showToast('Item berhasil dihapus!'))
-        .catch(err => alert('Gagal: ' + err.message));
-}
-
-// ===================================================
-// REFRESH DATA
-// ===================================================
-
-function refreshData() {
-    location.reload();
-}
+    document.querySelectorAll('.category-section').forEach(sec => {
+        if (key === 'all' || sec.dataset.key === key) sec.style.display = 'block';
+        else sec.style.display = 'none';
+    });
+};
