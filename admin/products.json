@@ -1,0 +1,481 @@
+{
+  "canva": {
+    "title": "Canva",
+    "icon": "🪄",
+    "description": "Paket desain untuk kebutuhan konten, branding, dan editing harian.",
+    "items": [
+      {
+        "id": "canva_01",
+        "name": "Member Pro",
+        "duration": "1 bulan",
+        "price": "Rp5.000",
+        "notes": []
+      },
+      {
+        "id": "canva_02",
+        "name": "Member Pro",
+        "duration": "2 bulan",
+        "price": "Rp10.000",
+        "notes": []
+      },
+      {
+        "id": "canva_03",
+        "name": "Owner",
+        "duration": "1 bulan",
+        "price": "Rp25.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBw8PDQ4NDw8QEA8PEBUPDxAPDw8QFQ8OFRYYFhURFRUYHSggGCYmHxUVIjMiJSkrLi8uFx8zODMuNygtLysBCgoKDg0OGBAQGi0lICUtLS4tLS0rLS0vLTItLS0rKy8rLS0tLy0tLSstLSsrKy0tLS0tLS4uLS0tKy0rLSstLf/AABEIAOEA4QMBEQACEQEDEQH/xAAcAAEAAgMBAQEAAAAAAAAAAAAAAQYCBQcEAwj/xABCEAABBAEABggCBwYFBAMAAAABAAIDEQQFBhIhMUEHE1FhcYGRoSIyI0JScoKxwRQkQ2KS0aKywuHwFjNzgxU0dP/EABoBAAIDAQEAAAAAAAAAAAAAAAABAgMFBAb/xAAzEQACAgECAwQLAAMAAwEAAAAAAQIRAwQSBSExQVFhsRMiMnGBkaHB0eHwFCNCM0PxBv/aAAwDAQACEQMRAD8A7igAgAgAgAgAgAgAgCCUAafP1nxIbBk6xw+rF8fvw91fDTZJdhm5+LaXDycrfcuf6+pX8zXp5sQwtb2OkcXewr810x0S/wCmZGb/APQy/wDVD5/hfk1GRrRmv/jFo7GNa33q/dXx02Jdhn5OMauf/de5I18mkch3zTzO8ZXn9VascF0S+RyS1eeXWcvmzzucTxJPiSVOkUuTfVkBxHAkeBpFApNdD7x587flmlb92V4/IqLxwfVL5F8dTmj0m/mz3Y+subHVTucOx4a+/Mi1W9NifYdWPimrh/3fvpm2xNe5m7pYWPHawlh9DYVEtDF+yzQxceyL/wAkE/dy/Jv8DW7DloOeYnHlKKH9Q3e65p6TJHsv3Grg4vpsnJva/H89DeseHAOaQQd4INgjuK5mqNNNNWjJAwgAgAgAgAgAgAgAgAgAgAgAgAgAgCHEAEk0BvJPIIE3XNlZ0vrjDFbIB1z/ALV0wHx+t5eq68eklLnLkYmr45hxeri9Z/T9/D5lO0npnIySetkJb9hvwsH4Rx87Xdjwwh0R5rU6/PqPbly7lyX97zX0rTjIQAQAQATGEAQgYQSIKY0QmSPXo/Sc+ObhlczmWg20+LTuKhPFCftI6tPqcuB3jlXl8i4aH14Y6mZTerdw6xllh8Rxb7rgy6FrnDmb+l41GXq5lT710/RboZWvaHscHNcLDmkEEdxC4WmnTNuMlJXF2jNIkEAEAEAEAEAEAEAEAEAEAEAeDS+l4cVm1K7eflYN7nnuH6qzHilkdI5NXrcWljuyP3LtZzzTesE+USHHYi5RNO78R+stPFgjj9543W8Tzap0+Ue5ffvNSrzOCACACACACAIQMJjIQMIJIhMaITJEJk0QUEke/RGmp8R21E74SbdG7ex/lyPeFXlwQyr1vmdml1eXTu4Pl3djOj6A1hhzG007EoFuicd472n6w71k59PLE+fTvPUaTXY9QuXJ9391Nwuc7QgAgAgAgAgAgAgAgAgDR6yawsxG7DafO4fCzk0fad/bmujBgeR2+hl8R4nDSx2rnN9F3eL/ALmc5y8qSaR0sri97uJP5Ds8FqRioqkeLzZp5puc3bPipFIQAQAQAQAQAQAQMhMZCBhBIgpkkQmSRBTJIhMmjEpkkZRSuY5r2OLXNNtc00Qe0FDSaplsG4tNOmdE1U1rGRWPOQ2fg13Bs39j3c+XYMnU6R4/Wj08j0mh4gsvqZPa8/2WpcJqhABABABABABABAGi1n0+3EZsNp07x8Dfsj7bv07V0afA8jt9DL4lxGOlhUec30Xd4v8AuZzaaVz3Oe9xc5xtzjvJK1kklSPEznKcnKTtswQQJQIIAIAIAIAIAIAhAwmMhBIJjMUEkEySITJoxKZNEFMmiCmTRF1RG4jeCNxB7QmTR0bUzWf9oAxpz9O0fA4/xmj/AFD349qyNXpfR+vHp5fo9HoNb6Vejn7Xn+y2LgNMIAIAIAIAIA1+m9KMxIHSu3ngxv238grMWJ5JUjl1mrjpsTnL4LvZyvMynzSOlkO095sn9B3LZjFRVI8HmyzzTc5vmz5KRSEhEoAIEEAEAEAEDIQATGQgYTJEIGiEyZCZJEIJIhMmjEqRNEJk0YlMsRMcjmua9pLXNIc1w3FrhwIQ0mqZZFtO0dX1T08M2C3UJ46ErRz7Hgdh/O1harTvDLl0fQ9LpNSs0OfVdTeLlOsIAIAIAhzgASTQG8k8ggTdc2cs1m0ucvILgfomW2Ify83ef5UtnT4fRx8e08PxLWPU5rXsrkvz8TUq4zggRKBBIQQBKAIQAQATGEAQgYTJEIGQmSITJJEIJIhMmiCmTSIKZNIxKZNEFSLEjEpk0j26F0o/EyGTs31ue37cZ+Zv/OYCrzYVlg4s6cGV4pqSOyYuQyWNksZ2mPaHNPaCvOSi4txfVHpIyUkmj6qJIIAIAq2vmleqgGO0/HP83dEOPrw9V2aPFulufRGLxrVejxeij1l5dvz6HPQtQ8iSgQSEECJQIIAIAIAIAhAwgYTGQgdEJkkQmSSBQSSITJJGKZNIgpk0iEyaRiUyaRBTLEjEqRYkYlMsSL50baY+fBee2SG/8bP1/qWVxLB0yr3P7GtoMv8A638C+rJNIIAgnmgDkmntInJypZvqk7MfdG3c314+a3MOP0cFE8JrtR/kZ5T7Oz3Lp+TXq04yUhBAiUCCQBAggKCB0EwCBkICgglRCY6ITJJEWgkkRaZJIWmSSMUyaRCZNIgpk0jEpliRBTJpGJKZYkYlSLEj7YOY6CaOdnzRODx31xafEWPNKeNTi4vtL8bcZKS7Dt2JkNlijlYbZI0Paf5XCwvLTi4ycX2G9FqSTR9lEZpNcc7qcGUg06T6Jvi7j7bS6NLDfkXhzM/imb0WmlXV8l8f0ctW0eLolIQQRJSCggVEtaTwBPgCUN0Ci30RB7OfYgVUEAEBQQOiLTHQtA6ItOiVEWmSoi0DSFpkkiLTJJEWgmkRaZJIglBNIhSJpGJTJpGJKZYkYlSLEiCmWJGJTLUjp3RrpDrMN0BPxY76H/jf8Q99oeSwuJYtuXd3mppZXCu4t6zjqKH0kZdyQQA/K0yuHe47Lfyd6rT0EOUpfA85xzLcoY/j9l9ymrQMCiUiIQKj16N0fLkyCKJu07iTwDR9px5KvJkjjVyLtPpsmeezGufl7y+6O1UxMZnWZGzK5otzpaEbe34Tu9bWZk1WTI6jy93U9Pp+E6fBHfl9Zrq30Xw/J5czXaCI7GPCZGjddiJvkKJ9gpx0U5c5OvqU5eN4cb24o39EezROl8bSQdFLC0PaNosfT7bw2muq+fdxVeXFPBzTOjS6vBr04Thz7nz+TKlrXoT9jmbsEmGWyy95aRxYTz4hd2mzeljz6owOJaD/ABci2+y+nh4GjtdRnURaKHQtOiVEWgdEWmOiLRRKiLTokkLTJURaKJJEWmSSItMmkRaCSRBKZNIglMmkYlMsSMSmWJGJKkWpGJKkixItPRvm9XpDqid08bmV/O34x7B3quDiWPdh3dz/AEdmmdSo6svPHecp1xyOs0hP2MLYx+Fov3tbmkjWGJ4/ic9+qn4UvoaZXmfRNoFR9caB0sjImC3vcGtHeVGUlFNsePHLJJQj1Z1fQWiY8OARtou4yv4F7u3w7AsPNleWVs9ro9JDTY9q69r7yia2awHKkMUZ/d2Gm1/EcPrn9Fp6bTrGrfXyPNcT171E9kX6i+vj+Cv2uoy6LJqBG4520ODInFx8SAB/zsXJrWlj+Jr8Eg3qbXYn9jadJMzdnGj+ttOf4NAA/X2VPD4u5M7ePSW2Ee22yjWtI87RFp0OiLTolQtFDoi06JURaKHRFp0Soi06JJC0EkiLTokkevRmjJ8p/VwMLyBbjYAaO0k8FXlywxK5Mvw4J5XUEenTGr2ViNa+Zg2HGttjtoB3YeYUMOpx5XUepdl0mTCrkuXgai10FKRBKZYkQUyxIxJUixIxJTLEjElSLUj2aDyeqzMaX7MzCfulwDvYlV54b8Uo+DL8fKSZ3ReSNA4xpSXbych/2ppD6vK9FiVQivBHiNQ92Wb8X5nmtTKKCQqLl0c6PDpJcpw/7f0cf3yLcfIUPxFZ+vyUlBdvM2+Cae5Syvs5L7m9140iYMMsaafOerFcQyrefTd+Jc2jx78lvouZo8W1DxYKXWXL8nMbWyeRoWih0WPVnWKLChlBhc+Z7rDgWhpaB8LSeIo3yPFcmo00sslz5GroNdj0uOS2tyf8jS6U0jJkzOnlI2nbgBuDWjg0dy6MWKOOO2Jw6jNPPkeSfXyNzoLVCbJaJXu6mI72kt2nPHaG7qHefRc+bWQxvaubO/ScKyZluk9q+rPVpzUp0ELpoZTIGDaexzQDsjiWkcfClDDrlOSjJUXanhDxwc4SuuwnRuokkkQfNN1TnCxGI9st7No2N/cjJxCMZVFWPDwaUo7pyp91X8yozN2XvbYOy4tscDRqwtGPNJmVKO1tdxbMTUV8mM2b9oaHvYHtZ1ZI3iw0uv3pZ8+IKM9u3ka2PhEpY1LdzauqKri4sksrYY2F0jjsho42ON9ldq75SjGO5vkZsMUpy2RXMuWN0ekx3JkbMhHBjNprT2Ek272WdLiXP1Y8jYhwf1fWlz8Fy/vkU3SGI+CaSCStuN2ya4HmCPEEHzWljmpxUl2mXkxPHNwfVG01Y1cfnF52+riYac+tolx37LR4c+8KjU6pYKVW2dWk0bztu6SMNatCtwZmRNkMgezb+IAFu8jlx4J6XO80XJqh6vSrBJRTst2rY/ZdCPyWAdY6OWcmrtwsN9AB7rO1P+zVKD6WkaelXotK5rrTZ53ZT5tXXyzuL3kO+J1WSJqafYKexQ1qjDkv1zIqUp6JufN8/Pkc/ijc9zWMaXOcdlrWiySeQC2G0lbMyMW3SLpo3o9e5gdkTdWSP+3G0OLfFx3eg81mZOJpOoK/eaePh7q5s12mtS54JoY4j1zZnbDHVs7DqJp/GhQJvuKvw6+E4ty5V/ciOTSSjJJc7PtpnUc42HJkuyQ50YDnM6ummyBsh19/ZvUcPEPSZVBR6+JZPSbIXZTSVqFKRiSmi1IwcdxUkWpHY/8AqMdy8t/is69xzB7rcT2kn1W2lSPEy5tshBGibQKjqGocIbo6N3ORz3nx2i0ezQsTWu8z+B6rhMNumi+9t/WivdJM95MEfJkRf5vcR/oC6+Hx9ST8f7zM3jUrywj3K/m/0VC1oUY9EWigoWnQ6LBqXocZWSXSC4Yac8Hg95+Vh9CT4d65NZm9FCl1Zo8N0izZbl7K+vci8a16Y/Y8UvbXWvPVxA8nc3V3Df6LM0uD0s6fTtN7Xan0GK11fJf3gUzUfOldpJu1I9/WteJNpxO1Q2gT5haWtxxWHkulGNw3JN6nm27Tsv2nszqMSebmyM7P3zub7kLJwQ35Ix8Te1OT0eKU+5HGWNLiGDe5xDR3uO4L0rpc2eRUG+SO3wsEUTW8o2AeTR/svLt7pX3ns4rbFLuKZA6PROKcmRodm5RJaw/UBN7J7ALBPaaHYtJqWqybI+zH+/8Ahkx26PHvkvXl2f3d2+JaNX8uSfDgnlrbkZtHZFDiaoeFLh1EFDJKMeiNHTZJZMUZS6tHNNdpQ7SWTXItb5hjbW5oo1gj/dpha7nqJfDyLv0exbOjmGvnkkd4/Fs/6VlcQd538DW4dGsC97Kt0ln9/Z/+dv8AnkWhw3/xP3/ZHDxFf7l7vuzb6h6TinxHaOlIDgHta0mushfZNd4s+VLm1+GUMnpY/wDxo6tDkjLH6KX8j0ay6InGj8bR+LG6UAtEjrY3cwXZs7rcQfJQ02eHppZcjr9/onnwz9DHFBX+j7an6qjEueYtfkOFDZ3tibzAPMnmfLtuOs1npfVj08yel0vovWl18jX9IesL4tnChcWuc3ame00Q0/KwHlfE91dqu4dpVL/ZJe4jq8zXqR+J9OjDIe6DIY4lzWSAssk1tDeB6X5qPFIJTi12olo29rTJ6UM3YxYoAd80m07vZHv/AMxZ6I4XjvI5dy8/5k9S/VSOYkrfORIxJUkWpGJUi1I9/wD8m7tXP6BFh9HCiR2GlSjx7VMII0LSoVHVdRpNrRsHcZGnykd/ssLWqs0vh5HquGO9NH4+bKr0kMIzIncnQADxD33+YXfw53ja8TL4xD/en4eTZU7XfRlURadDoEp0OjrOpuizjYbA4VJL9LIOYJ4NPgK87Xn9Zl9JlddFyR6nQYPQ4Un1fNlR6SMsuzI4fqxRA/jeST7Bq0eGwrG5d78jM4rNyyqPcvMno2xC/Kln+rFHsj77z/ZrvVLiU6xqPe/IfCsV5XPuXmbvpKytnDjiH8WUX91gLvz2VzcNheVvuR2cUlWJR735cyqaj6PM+fGSPgg+mf4j5B/VXoVoa7JswvvfL8mdoMO/Mn2Ln+Dq8jg1pc4gNAJJPAAcSV59K+SPRt0uZxrWHSrszKfLv2SdiFp+rGD8I8+PiV6bT4VhxqPzPM6jK82Ry+R1/DhEMEcfBsUbW+TRV+y83OTnJvvZ6SEVCCXcjimTM7IyHvALnzylzW8y57vhb7gL1EYrHBJ9EvI81JvJNvvfmdj0JCyGBmK1wLsdrWSV9stDifO7815rNJzm5vtPR4YqEVBdhROk5lZkLvtQAej3f3Wtwt/65Lx+xmcQj/sT8Dzah6MEk7syWhBiDbLjw6yrHoPi9FPX5nGHo49Zf31Fo8Vy3vojx6Z1pyp5pXRzSxxPdUcbXltMG4cOZ4nvKtw6PFCC3RTfaxZNRknJ03R1nBxxFDFEODGNZ40KtednLdJy7zYjHbFI4rpzMM+XkTH68rq+4DTR6AL1Gnx7McY+BkZHum2dG6NsMx4HWEb55HPH3BTB/lJ81i8Sybs1dyr7mhpY1C+8qvSbl7ee2LlDE0fidbj7bK0eFwrC5d7IZ+c6KpNC9gYXtc0SN22FwI22cNodo3LRjJO6fQgonxJUy1IwJUki1I9f7C7sVXpUT2mx0kzZyMhn2ZpG+jyP0XJjdwi/BeR5HLGskl4vzPPanRXRFooKL/0aaQBZNik/E13XMHa00HAeBAP4lk8SxU1P4G5wnL6ssb96/v7qezpC0U6bGZOwEvxyS4DiYnVtelA+Fqrh+ZQm4vo/Mt4np3kxqcesfLtOZ2t2jz9EWih0WrVDQId+/wCV8GLD9I3b3dYW79qvsj3Kz9Zqa/1Y+cny937NLRaS/wDdk5RXP3/rzLxq1pkZsL5gNmpXs2eYaDbb/CQsvU4HhkovuNjTZ1mg5eL/AF9Cn696FyZM4SxQvlbKxoBY0u2Xt3EO+zyNnctLQajHHFtk6ozNfp8ks26Ku0WjVLBjxIjibTXZADZsgNN059ho8g2vK+a4NXklll6SvV6L4Hfo8UcMfR363V/E03SRgzzOwxDE+QDrAdhpdTjsVfZwO89hXVw3JCCnuaXT7nNxLHObhtTfX7G01P0ZHhsdjuc12U5rZpw3fstNhjb7BR87PNc+szSzPel6vRfc6NHhWGO1+11f2Pl0h6R6nBMbT8eQ7qv/AF8Xn0FfiUuHYt+a32c/wGvybcVLt5fk5no54GRAXfKJoy77ocLW9lT2SrufkY2NevH3rzO3ZsRfFKxppz2OaD2EggFeUg6kmz0klcWih6F0ANGsfpHO2dqIfQxNcHfSHcN/Ak8B2cfDXz6n/Jaw4e3qzMw6f0C9Lk7OiM+jzS7pcvMbKfjyKn/E00QPJzfJqXEcChjg49FyJ6LK5TlfV8zba7auS5pxnQlocxzmvLzVRuo7XfWzw71z6HVRwbt3aXarTvLt2lY1q0nFjwN0TiG2R/8A2ZB/Ek4ltjjv3nyHIhd2kwyyT/yMnV9F/fT5nNnmox9FDp2lQ2q3jiN4WnRzJHesWdskUcrTbZGB7T2tcLC8hKLjJxfYbqdqzkzNUMt+a7HMT2xiQ3OWnY6q/nDuBNchvvzXonrsUcSnfOunbZnLTy3VR1PRT4TBGMcgwsHVsLd4phLCPVpXn8qmpvf16/PmaEarkc403oHIzNNTxhjxG57S6UtOy2LYb8QPAndQHb5rcwanHh0kXfPny8bKJQcps8Ov+bE/LZjw11WJEIBXDaHEDw3DxBV3Dscljc59ZOyUub5FXJWiSSPm87j4KSRbGJ13/pj+VeX/AMwCn64wdXpHJHJzxIO8PaHE+pK0tHLdgieZ1sNueXzNNa6aOWiLTodHo0fnSY8zJ4jT2Gx2Ec2ntBUMmKOSLjLoTxTljkpx6o6poHWnGy2gbQjm5xPIBJ/lJ+YeCwNRo8mF9LXf/dD0ODWY8q7n3f3U+GktScOZxeA+FzjZ6lwAJ7dkggeSli4hmgq6+8hl4fhm76e48h1c0XgATZD9qt7RO8Os/wAsbQNrwoq3/K1Of1YL5fnsK/8AE02D1p/X8dpVdatanZn0MYMeM07m8DIRwLq4dw/4NDSaJYfWlzl5HFqtU83qrlHzPDq/p+bBkL46c19CSN106uB7j3q7UaWGeNS+ZXp888LuPyLBm9IsrmFsUDI3EfO55krvAoe644cJin60r+h2S4jJr1Y0VvRmnZ8fJOU1+3I++s27IlB4h3t4Uu7LpseTH6Nql2eByYs08c96fPt8SyZXSNK5lRY7I3kfO55eB3htBcMOExT9aVr3HbLiEmuUTQaF1jmxsp+UfpXSgiUPdW2DRu+VUK9F2Z9JDLjWNcq6HNhzyxzc+t9SdZ9Yn58kbnMEbYmkMaHF291bRJodg9EaXSLTppO7HqMzzNNqqNLa66KKLjozpBniibHLC2YtGy1+2WEgcNrcb8Vl5eFQlK4uvA78etlGNNWaHT2n5814dKQGt+SNthrO/vPeV2afSwwKo/Moy5ZZXcjx6OzpMeaOeI0+M2L4HkWnuIseasy4o5IOEujIwbhJSRZtL6/ZE8XVRMEG0Ke9ry5x7Q00Nn81w4eGY4S3SdnXPVzkqSoqFrSOZIWgkkWbVzXSbDjEDmCaIfIC4tcy+QdR3d1Lg1PD4Zpbk6Z1YszgqM9O695GTGYo2DHjcKfsuLnuHZtUKHgPNLT8Mx45bpO39CyWaUuS5Hj1Y1tmwA6MNEsLjtdW4lpa7mWu314UrdVoYah7rp948cnHke3TXSDkzsMcLBjtcKc5ri99dgdQ2fS+9VYOFY4PdN7vIt3tlOJWohqJgSpJFqR6tD4/XZeNDV9ZNG0/dLhte1qvPPZinLuT8i2qR+gV4oqOcdJ+Js5EE4G6SMxn7zDY9ney2+FzuEodzv5mNxLH68Z96r5FKtalGdQtOgoWig2kFOh7T7sz5mimzStHY2WQD0BUXig+sV8kTUpro382fB7y4lxJLjxJJJPiVNRSVIVW7ZjadD2kWnQ9otFDoi0UOhadDoWih0RaKHQtFDoWih0LRQ6FoodEWiiSQtFEkiLRRNIWiiaRiSnRYokEp0WpGJKdFqRiSnRYomJKlRcolp6M8LrdJseR8MDHyn71bDf81+SzuLZNmna72l9xz5ROyLypQVvX/A67R8jgLdARMPujc7/CSfJd3DsmzOl38vwcmtx78T8OZyS16SjF2i06DaRaKHtFp0OiLTodEWih7SLToe0WnQ9otFDoi0UFC06HQtFDoWigoWlQ6ItFDoWih0LRRKhaKJJEWgkkLRRNIglFFiiQSnRYomJKdFiiYkp0WqJiSpUWqJiSmWpHVeiXR2xizZRG+d+y3/xx2L/qLvReb4zm3ZVjXYvq/wBUU5XzovaxioxkYHNLXC2uBBB5g7iE06doGrOGab0ecXKmx3fw3kNJ+tGd7HeYI916/T5Vlxxmu3+Zh5MeyTieK1dRCiLToNpFoodC06HtItOh7SLRQ9otOh7SLRQ6FoodC0UFC0UOhaKChaKHQtFDoWih0LSokkRaKJJC0USSItFE1Ei06LFEglOi1RMSU6LFExJTotjExJTotUT6Y2O+WRkMYt8jwxg7XONC1GclCLlLouZPpzP0HorBbjY8OOz5YmBgPbQ3uPibPmvD5sjyzlN9rOFu3Z6lWIIAonSfobbiZnMHxRfRzVziJ+F3kT/i7ls8J1FSeJ9vT3/s49Vitbkc0tego4dpFp0PaLToe0i06HtItFD2i06HRFoodC0UFC0UOhaKChaKChaKHQtKgoWiiVC0UOhaKJJC0qJKJFoomoi0UTUTElOixRIJTotUTElOi1RMSU6LFEi0yxIv/RRoPrJn57x8ENxw3zlI+Jw8Aa/EexYfGdTtisMer5v3dhTnlS2nVF5s5AgAgD5zwtkY6N4DmPaWuaeBaRRCcZOLTXVCavkcO1m0O/BynwOss+aJ5+vEeB8RwPeF7LR6hajEprr2+8z549ro1VrqohRFp0OhadDoi0UPaLTodEWih0LRQULRQUTaKChaVDoWigoWih0LSoltFooe0i0EkhaKJqItKiaiQSnRYomJKdFiiYkp0WKJBKdFqiRaCaR6tE6PkysiLGiFvkdQPJrfrPPcBZVWfNHDjeSXRf1A2oq2d/0To6PFx4saIUyJuyO1x5uPeTZ814jNlllm5y6sz5ScnbPWqiIQAQAQBodcNXm5+MWChNHboHnk7m09x4eh5Lt0OremyX2Pr/eBDJDcjic8To3uje0texxa5rtxa4cQV7KLUkpR5pnJtPnalQ6ItOh7RaKHRFp0FE2igoWlQULRQULRQ6FpUFC0UOhaKHtFooltFpUSURaKJKJFoomoi0UTUTElOixRIJTosUTG06LUiLQSokep7BvspMZ2bo81W/YoDPM396nA2gf4UfER+PM99DkvI8T13+RPZD2V9X3/AIOHNk3Ol0LesspCACACACACAKVr/qj+1tOXjt/eWD42Dd17By+8OR58OytjhfEfQP0eT2X9P13/ADIThfM5I7cSCCCDRBFEEcQQvWLmVbTG06HtFoodC0UFC0UFC0UFC0qCibRQULRQ6FpUOhaKHtItFElEWiiaiLRRJRItKiaiQSnRYokEp0WKJFoJpBAyEhnTujnU0tLNIZTaPzY0Th8vZM8dvYOXHjVec4rxFO8OJ+9/Zff5e/lzZf8AmJ0lefOUIAIAIAIAIAIAIAo+vWpAytrKxQG5PF7NwbP/AGd38Dz7RtcN4o8FY8vs9/d+v5CaOSzRuY5zHtLXtOy5rgQWuHEEHgvWRaklKLtMVGFqQULSCibRQULRQULRQULSodC0UOhaKHtFookoi0qJKJFoomoi0UTUSLRRNRItMmkEhhAyQOXbuHeexIDpmomoRaWZmczeKdDju+qeT5R29jeXPfuHm+JcVtPFgfvf2X5+XjzZc3/MTpS8+coQAQAQAQAQAQAQAQAQBXNbNUMfSDdo/RZAFMmaLvsa8fWHuORWjoeJZNK66x7vx3Ace07oLJwZOryIy2z8Eg3skH8rv049y9fpdXi1Md2N+9dq9/8AUOjWWuqh0LSoKFooKFoodC0UOhaVEtotFDURaKJKJFoomoi0USURaRKggkAkBKQHr0XoyfKlEOPG6R54gcGj7TncGjvKpzZ8eGO/I6X90E5KKtnXNT9RYcLZnmImyuIdXwRH+QHn/Md/ZS8rruKT1HqQ5R+r9/4OTJmcuS6FwWUUhABABABABABABABABABABAHwzMSKeN0U0bZI3bnMe0OB9VPHknjkpQdPwA5zrH0Y8ZMB/f1ErvZkn6O9V6LSce/51C+K+6/HyJqXec80hgzY0nVZET4X8myNq+9p4OHeLC9FhzY80d2OSa8P7l8SxKzzWraHtFpUPaRaKHtFooltFoHQSJUEhkpDCAJSGfXFx5JXiKJj5JHcGRtLnHvofmq5zjCO6bpeIN1zZfdXejOWTZkzn9Szj1MZDpD3Odwb5X5LD1XG4R9XArfe+nwXb9CiedL2TpWi9GQYsQhx4mxsHJo3uPa48XHvK87mz5M0t2R2zllJyds9iqEEAEAEAEAEAEAEAEAEAEAEAEAEAEAfDMw4p2GOaNkrDxbI0PB8ip48k8ct0G0/AE6KbpboxwpbdjvkxnHkD1jL+67ePIrZwce1EOWRKS+T+a/BYsrXUp+kejTSMVmLqsho4bD+rcfwvoe62MPHdLP27j71a+n4LVliyu5mgs2E1LiZDO8wvLf6gCPdaOPWafJ7E4v4ry6likn2mt2xdWL7LXRTJ0zIKIiUhmJeBzHqEUx0zYYmiMqYgRY08l8C2GQj+qqHqufJqcOP25pfFCckurLDo7o60lLReyOBvbLICa+6y/eln5eNaWHsty9y/NFbzRRbNFdF2MynZM0k55tZ9Ez2JcfULKz8dyy5Y4qP1f4+hVLO+wumjtGwYzOrx4Y4m8wxoFntJ4nxKx8ubJle7JJt+JS5N9T1qoQQAQAQAQAQAQAQAQAQAQAQAQAQAQAQAQAQAQAQAQBWdbuB+6tDQ9ScTj+mfnK9fpuh0x6Hx0Z848VPUdCUuh1rU76i8lr+05ZlyWUVhABABABABABABABABABABABAH//Z"
+  },
+  "chatgpt": {
+    "title": "ChatGPT",
+    "icon": "✨",
+    "description": "Pilihan paket AI premium untuk kebutuhan chat, ide, dan produktivitas.",
+    "items": [
+      {
+        "id": "chatgpt_01",
+        "name": "ChatGPT Priv Invite",
+        "duration": "1 bulan",
+        "price": "Rp15.000",
+        "notes": [
+          "Strong akun",
+          "Invite pakai email buyer",
+          "Full garansi"
+        ]
+      },
+      {
+        "id": "chatgpt_02",
+        "name": "ChatGPT Plus Private",
+        "duration": "1 bulan",
+        "price": "Rp20.000",
+        "notes": [
+          "Akun seller",
+          "Full garansi",
+          "Full garansi jika patuhi S&K",
+          "Owner akun dari seller",
+          "Owner bisa invite 100 member"
+        ]
+      }
+    ],
+    "category_notes": [
+      "25 - 30 hari dihitung 1 bulan",
+      "No rush",
+      "Wajib tanyakan stok ke admin",
+      "Max invite dibatasi untuk menghindari over seat yang mengakibatkan akun deactivated",
+      "Semua transaksi no refund kecuali kesalahan admin"
+    ],
+    "logo": "assets/logos/chatgpt.jpg"
+  },
+  "youtube": {
+    "title": "YouTube",
+    "icon": "📺",
+    "description": "Paket YouTube premium untuk nonton tanpa iklan dengan harga ringan.",
+    "items": [
+      {
+        "id": "youtube_01",
+        "name": "Famplan (Invite)",
+        "duration": "1 bulan",
+        "price": "Rp4.000",
+        "notes": []
+      },
+      {
+        "id": "youtube_02",
+        "name": "Indplan",
+        "duration": "1 bulan",
+        "price": "Rp7.000",
+        "notes": []
+      },
+      {
+        "id": "youtube_03",
+        "name": "Famhead",
+        "duration": "1 bulan",
+        "price": "Rp10.000",
+        "notes": [
+          "Bisa invite 5 orang"
+        ]
+      }
+    ],
+    "category_notes": [],
+    "logo": "assets/logos/youtube.jpg"
+  },
+  "netflix_harian": {
+    "title": "Netflix Harian",
+    "icon": "🎟️",
+    "description": "Pilihan harian untuk kebutuhan nonton cepat dan fleksibel.",
+    "items": [
+      {
+        "id": "neth_01",
+        "name": "1 Hari 2 User",
+        "duration": "1 hari",
+        "price": "Rp3.000",
+        "notes": []
+      },
+      {
+        "id": "neth_02",
+        "name": "1 Hari 1 User",
+        "duration": "1 hari",
+        "price": "Rp5.000",
+        "notes": []
+      },
+      {
+        "id": "neth_03",
+        "name": "7 Hari 2 User",
+        "duration": "7 hari",
+        "price": "Rp9.000",
+        "notes": []
+      },
+      {
+        "id": "neth_04",
+        "name": "7 Hari 1 User",
+        "duration": "7 hari",
+        "price": "Rp10.000",
+        "notes": []
+      },
+      {
+        "id": "neth_05",
+        "name": "7 Hari Semi Private",
+        "duration": "7 hari",
+        "price": "Rp12.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": "assets/logos/netflix.jpg"
+  },
+  "netflix_bulanan": {
+    "title": "Netflix Bulanan",
+    "icon": "🎬",
+    "description": "Paket bulanan buat yang ingin pengalaman nonton lebih nyaman.",
+    "items": [
+      {
+        "id": "netb_01",
+        "name": "Netflix Semi Private",
+        "duration": "1 bulan",
+        "price": "Rp27.000",
+        "notes": [
+          "Bisa login 2 device",
+          "Tidak bisa nonton secara bersamaan"
+        ]
+      },
+      {
+        "id": "netb_02",
+        "name": "Netflix Sultan VIP",
+        "duration": "1 bulan",
+        "price": "Rp35.000",
+        "notes": [
+          "Jatah 1 profil",
+          "Bisa login 2 device",
+          "Bisa nonton secara bersamaan",
+          "Garansi anti limit"
+        ]
+      }
+    ],
+    "category_notes": [],
+    "logo": "assets/logos/netflix.jpg"
+  },
+  "apple_music": {
+    "title": "Apple Music",
+    "icon": "🎼",
+    "description": "Paket musik premium untuk pengalaman dengar yang lebih nyaman.",
+    "items": [
+      {
+        "id": "apple_01",
+        "name": "Famplan",
+        "duration": "1 bulan",
+        "price": "Rp10.000",
+        "notes": []
+      },
+      {
+        "id": "apple_02",
+        "name": "Indplan",
+        "duration": "1 bulan",
+        "price": "Rp12.000",
+        "notes": []
+      },
+      {
+        "id": "apple_03",
+        "name": "Head",
+        "duration": "1 bulan",
+        "price": "Rp20.000",
+        "notes": [
+          "Bisa invite 5 orang"
+        ]
+      }
+    ],
+    "category_notes": [
+      "Order harap sabar ya, bisa fast bisa slow",
+      "Selalu tanyakan stok kepada admin sebelum payment",
+      "Full garansi jika patuhi S&K",
+      "Akun dari seller",
+      "Head bisa invite 5 orang"
+    ],
+    "logo": "assets/logos/apple_music.jpg"
+  },
+  "alight_motion": {
+    "title": "Alight Motion",
+    "icon": "🌠",
+    "description": "Paket editing motion untuk kebutuhan konten dan video kreatif.",
+    "items": [
+      {
+        "id": "alight_01",
+        "name": "Private - Akun Seller",
+        "duration": "1 tahun",
+        "price": "Rp10.000",
+        "notes": []
+      },
+      {
+        "id": "alight_02",
+        "name": "Private - Akun Buyer",
+        "duration": "1 tahun",
+        "price": "Rp15.000",
+        "notes": [
+          "Proses slow"
+        ]
+      }
+    ],
+    "category_notes": [],
+    "logo": "assets/logos/alight_motion.jpg"
+  },
+  "wink": {
+    "title": "Wink",
+    "icon": "💞",
+    "description": "Pilihan paket Wink dengan opsi sharing, private, dan jaspay.",
+    "items": [
+      {
+        "id": "wink_01",
+        "name": "Sharing",
+        "duration": "7 hari",
+        "price": "Rp8.000",
+        "notes": []
+      },
+      {
+        "id": "wink_02",
+        "name": "Sharing",
+        "duration": "1 bulan",
+        "price": "Rp30.000",
+        "notes": []
+      },
+      {
+        "id": "wink_03",
+        "name": "Private",
+        "duration": "7 hari",
+        "price": "Rp15.000",
+        "notes": []
+      },
+      {
+        "id": "wink_04",
+        "name": "Jaspay",
+        "duration": "7 hari",
+        "price": "Rp12.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": "assets/logos/wink.jpg"
+  },
+  "capcut": {
+    "title": "CapCut",
+    "icon": "🎞️",
+    "description": "Paket edit video CapCut dengan pilihan sharing dan private.",
+    "items": [
+      {
+        "id": "capcut_01",
+        "name": "Sharing 3 User",
+        "duration": "7 hari",
+        "price": "Rp5.000",
+        "notes": []
+      },
+      {
+        "id": "capcut_02",
+        "name": "Sharing 3 User",
+        "duration": "1 bulan",
+        "price": "Rp10.000",
+        "notes": []
+      },
+      {
+        "id": "capcut_03",
+        "name": "Private",
+        "duration": "7 hari",
+        "price": "Rp7.000",
+        "notes": []
+      },
+      {
+        "id": "capcut_04",
+        "name": "Private",
+        "duration": "1 bulan",
+        "price": "Rp12.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": ""
+  },
+  "getcontact": {
+    "title": "GetContact",
+    "icon": "🔎",
+    "description": "Paket GetContact untuk kebutuhan premium dengan proses jaspay.",
+    "items": [
+      {
+        "id": "getcontact_01",
+        "name": "Jaspay - Akun Buyer",
+        "duration": "1 bulan",
+        "price": "Rp15.000",
+        "notes": [
+          "Jaspay",
+          "Akun dari buyer"
+        ]
+      }
+    ],
+    "category_notes": [],
+    "logo": ""
+  },
+  "zoom": {
+    "title": "Zoom",
+    "icon": "💻",
+    "description": "Paket Zoom private untuk meeting dengan kapasitas hingga 100 peserta.",
+    "items": [
+      {
+        "id": "zoom_01",
+        "name": "Private 100 Peserta",
+        "duration": "7 hari",
+        "price": "Rp8.000",
+        "notes": []
+      },
+      {
+        "id": "zoom_02",
+        "name": "Private 100 Peserta",
+        "duration": "14 hari",
+        "price": "Rp13.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": ""
+  },
+  "spotify": {
+    "title": "Spotify",
+    "icon": "🎧",
+    "description": "Pilihan paket Spotify dengan opsi full garansi, no garansi, dan link penawaran student.",
+    "items": [
+      {
+        "id": "spotify_01",
+        "name": "Indplan",
+        "duration": "1 bulan",
+        "price": "Rp22.000",
+        "notes": [
+          "Full garansi"
+        ]
+      },
+      {
+        "id": "spotify_02",
+        "name": "Indplan",
+        "duration": "3 bulan",
+        "price": "Rp33.000",
+        "notes": [
+          "Full garansi"
+        ]
+      },
+      {
+        "id": "spotify_03",
+        "name": "Famplan",
+        "duration": "1 bulan",
+        "price": "Rp21.000",
+        "notes": [
+          "Full garansi"
+        ]
+      },
+      {
+        "id": "spotify_04",
+        "name": "Famplan",
+        "duration": "3 bulan",
+        "price": "Rp34.000",
+        "notes": [
+          "Full garansi"
+        ]
+      },
+      {
+        "id": "spotify_05",
+        "name": "Student",
+        "duration": "1 bulan",
+        "price": "Rp13.000",
+        "notes": [
+          "No garansi"
+        ]
+      },
+      {
+        "id": "spotify_06",
+        "name": "Indplan",
+        "duration": "3 bulan",
+        "price": "Rp17.000",
+        "notes": [
+          "No garansi"
+        ]
+      },
+      {
+        "id": "spotify_07",
+        "name": "Link Penawaran Student",
+        "duration": "1x proses",
+        "price": "Rp6.000",
+        "notes": [
+          "Akun dari buyer"
+        ]
+      }
+    ],
+    "category_notes": [],
+    "logo": ""
+  },
+  "duolingo": {
+    "title": "Duolingo",
+    "icon": "🗣️",
+    "description": "Paket belajar premium Duolingo dengan opsi private, head, dan famplan.",
+    "items": [
+      {
+        "id": "duolingo_01",
+        "name": "Private",
+        "duration": "1 bulan",
+        "price": "Rp13.000",
+        "notes": []
+      },
+      {
+        "id": "duolingo_02",
+        "name": "Head",
+        "duration": "1 bulan",
+        "price": "Rp18.000",
+        "notes": [
+          "Bisa invite 5 akun"
+        ]
+      },
+      {
+        "id": "duolingo_03",
+        "name": "Famplan",
+        "duration": "1 bulan",
+        "price": "Rp11.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [],
+    "logo": ""
+  },
+  "google_drive": {
+    "title": "Google Drive",
+    "icon": "📁",
+    "description": "Paket storage premium 5TB lengkap dengan bonus Gemini AI dan YouTube Premium.",
+    "items": [
+      {
+        "id": "gdrive_01",
+        "name": "5TB Bundle",
+        "duration": "1 bulan",
+        "price": "Rp15.000",
+        "notes": []
+      }
+    ],
+    "category_notes": [
+      "Bonus Gemini AI",
+      "Bonus YouTube Premium"
+    ],
+    "logo": "",
+    "category_note_title": "Bonus"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "STORE_NAME": "reiizam store",
+  "WA_NUMBER": "62882000414738",
+  "RESTART_DELAY_SECONDS": 5,
+  "IDLE_RESET_SECONDS": 900,
+  "ADMIN_USER": "admin",
+  "ADMIN_PASS": "password"
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Login - Admin{% endblock %}
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="col-md-5 col-lg-4">
+        <div class="card p-4 shadow-lg border-0">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="h1 text-primary mb-2"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3 class="fw-bold">Admin Portal</h3>
+                    <p class="text-muted small">Silakan login untuk mengelola toko</p>
+                </div>
+                
+                {% if error %}
+                <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-20 text-danger small py-2">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="post" action="/login">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-semibold">USERNAME</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-transparent text-muted small"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" name="username" placeholder="Masukkan username" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-muted fw-semibold">PASSWORD</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-transparent text-muted small"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" class="form-control border-start-0 ps-0" name="password" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        Masuk Ke Dasbor <i class="fa-solid fa-arrow-right ms-2 small"></i>
+                    </button>
+                </form>
+                
+                <div class="text-center mt-4">
+                    <p class="text-muted extra-small mb-0" style="font-size: 0.7rem;">Default: admin / admin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

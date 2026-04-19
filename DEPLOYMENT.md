@@ -30,9 +30,35 @@ Set these in the deploy platform:
 - `STORE_NAME`
 - `RESTART_DELAY_SECONDS=5` (optional)
 
-## Start command
+## Admin Panel
 
-`python bot.py`
+**Local Dev:**
+```
+pip install -r admin/requirements.txt
+cd admin
+uvicorn app:app --reload --port 8001
+```
+Visit http://localhost:8001 (admin/admin)
+
+**Usage:**
+- /config: Edit store settings (saved to config.json)
+- /products: Full CRUD categories/items
+- /export: JSON for bot.py
+
+## Bot Integration
+
+Bot now loads `admin/products.json` automatically.
+
+## Start commands
+
+**Bot only:**
+```
+python bot.py
+```
+
+**Admin + Bot:**
+Terminal 1: `cd admin && uvicorn app:app --reload`
+Terminal 2: `python bot.py`
 
 ## Reliability notes
 

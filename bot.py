@@ -15,6 +15,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
+    TypeHandler,
     Application,
     ApplicationBuilder,
     CallbackQueryHandler,
@@ -100,212 +101,107 @@ CATEGORY_LOGOS = {
 }
 
 # =========================================================
-# DATA PRODUK
+# DATA PRODUK - Loaded from admin/products.json
 # =========================================================
-PRODUCTS = {
-    'canva': {
-        'title': 'Canva',
-        'icon': '🪄',
-        'description': 'Paket desain untuk kebutuhan konten, branding, dan editing harian.',
-        'items': [
-            {'id': 'canva_01', 'name': 'Member Pro', 'duration': '1 bulan', 'price': 'Rp5.000', 'notes': []},
-            {'id': 'canva_02', 'name': 'Member Pro', 'duration': '2 bulan', 'price': 'Rp10.000', 'notes': []},
-            {'id': 'canva_03', 'name': 'Owner', 'duration': '1 bulan', 'price': 'Rp25.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'chatgpt': {
-        'title': 'ChatGPT',
-        'icon': '✨',
-        'description': 'Pilihan paket AI premium untuk kebutuhan chat, ide, dan produktivitas.',
-        'items': [
-            {
-                'id': 'chatgpt_01',
-                'name': 'ChatGPT Priv Invite',
-                'duration': '1 bulan',
-                'price': 'Rp15.000',
-                'notes': ['Strong akun', 'Invite pakai email buyer', 'Full garansi'],
-            },
-            {
-                'id': 'chatgpt_02',
-                'name': 'ChatGPT Plus Private',
-                'duration': '1 bulan',
-                'price': 'Rp20.000',
-                'notes': [
-                    'Akun seller',
-                    'Full garansi',
-                    'Full garansi jika patuhi S&K',
-                    'Owner akun dari seller',
-                    'Owner bisa invite 100 member',
-                ],
-            },
-        ],
-        'category_notes': [
-            '25 - 30 hari dihitung 1 bulan',
-            'No rush',
-            'Wajib tanyakan stok ke admin',
-            'Max invite dibatasi untuk menghindari over seat yang mengakibatkan akun deactivated',
-            'Semua transaksi no refund kecuali kesalahan admin',
-        ],
-    },
-    'youtube': {
-        'title': 'YouTube',
-        'icon': '📺',
-        'description': 'Paket YouTube premium untuk nonton tanpa iklan dengan harga ringan.',
-        'items': [
-            {'id': 'youtube_01', 'name': 'Famplan (Invite)', 'duration': '1 bulan', 'price': 'Rp4.000', 'notes': []},
-            {'id': 'youtube_02', 'name': 'Indplan', 'duration': '1 bulan', 'price': 'Rp7.000', 'notes': []},
-            {'id': 'youtube_03', 'name': 'Famhead', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': ['Bisa invite 5 orang']},
-        ],
-        'category_notes': [],
-    },
-    'netflix_harian': {
-        'title': 'Netflix Harian',
-        'icon': '🎟️',
-        'description': 'Pilihan harian untuk kebutuhan nonton cepat dan fleksibel.',
-        'items': [
-            {'id': 'neth_01', 'name': '1 Hari 2 User', 'duration': '1 hari', 'price': 'Rp3.000', 'notes': []},
-            {'id': 'neth_02', 'name': '1 Hari 1 User', 'duration': '1 hari', 'price': 'Rp5.000', 'notes': []},
-            {'id': 'neth_03', 'name': '7 Hari 2 User', 'duration': '7 hari', 'price': 'Rp9.000', 'notes': []},
-            {'id': 'neth_04', 'name': '7 Hari 1 User', 'duration': '7 hari', 'price': 'Rp10.000', 'notes': []},
-            {'id': 'neth_05', 'name': '7 Hari Semi Private', 'duration': '7 hari', 'price': 'Rp12.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'netflix_bulanan': {
-        'title': 'Netflix Bulanan',
-        'icon': '🎬',
-        'description': 'Paket bulanan buat yang ingin pengalaman nonton lebih nyaman.',
-        'items': [
-            {
-                'id': 'netb_01',
-                'name': 'Netflix Semi Private',
-                'duration': '1 bulan',
-                'price': 'Rp27.000',
-                'notes': ['Bisa login 2 device', 'Tidak bisa nonton secara bersamaan'],
-            },
-            {
-                'id': 'netb_02',
-                'name': 'Netflix Sultan VIP',
-                'duration': '1 bulan',
-                'price': 'Rp35.000',
-                'notes': [
-                    'Jatah 1 profil',
-                    'Bisa login 2 device',
-                    'Bisa nonton secara bersamaan',
-                    'Garansi anti limit',
-                ],
-            },
-        ],
-        'category_notes': [],
-    },
-    'apple_music': {
-        'title': 'Apple Music',
-        'icon': '🎼',
-        'description': 'Paket musik premium untuk pengalaman dengar yang lebih nyaman.',
-        'items': [
-            {'id': 'apple_01', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': []},
-            {'id': 'apple_02', 'name': 'Indplan', 'duration': '1 bulan', 'price': 'Rp12.000', 'notes': []},
-            {'id': 'apple_03', 'name': 'Head', 'duration': '1 bulan', 'price': 'Rp20.000', 'notes': ['Bisa invite 5 orang']},
-        ],
-        'category_notes': [
-            'Order harap sabar ya, bisa fast bisa slow',
-            'Selalu tanyakan stok kepada admin sebelum payment',
-            'Full garansi jika patuhi S&K',
-            'Akun dari seller',
-            'Head bisa invite 5 orang',
-        ],
-    },
-    'alight_motion': {
-        'title': 'Alight Motion',
-        'icon': '🌠',
-        'description': 'Paket editing motion untuk kebutuhan konten dan video kreatif.',
-        'items': [
-            {'id': 'alight_01', 'name': 'Private - Akun Seller', 'duration': '1 tahun', 'price': 'Rp10.000', 'notes': []},
-            {'id': 'alight_02', 'name': 'Private - Akun Buyer', 'duration': '1 tahun', 'price': 'Rp15.000', 'notes': ['Proses slow']},
-        ],
-        'category_notes': [],
-    },
-    'wink': {
-        'title': 'Wink',
-        'icon': '💞',
-        'description': 'Pilihan paket Wink dengan opsi sharing, private, dan jaspay.',
-        'items': [
-            {'id': 'wink_01', 'name': 'Sharing', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
-            {'id': 'wink_02', 'name': 'Sharing', 'duration': '1 bulan', 'price': 'Rp30.000', 'notes': []},
-            {'id': 'wink_03', 'name': 'Private', 'duration': '7 hari', 'price': 'Rp15.000', 'notes': []},
-            {'id': 'wink_04', 'name': 'Jaspay', 'duration': '7 hari', 'price': 'Rp12.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'capcut': {
-        'title': 'CapCut',
-        'icon': '🎞️',
-        'description': 'Paket edit video CapCut dengan pilihan sharing dan private.',
-        'items': [
-            {'id': 'capcut_01', 'name': 'Sharing 3 User', 'duration': '7 hari', 'price': 'Rp5.000', 'notes': []},
-            {'id': 'capcut_02', 'name': 'Sharing 3 User', 'duration': '1 bulan', 'price': 'Rp10.000', 'notes': []},
-            {'id': 'capcut_03', 'name': 'Private', 'duration': '7 hari', 'price': 'Rp7.000', 'notes': []},
-            {'id': 'capcut_04', 'name': 'Private', 'duration': '1 bulan', 'price': 'Rp12.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'getcontact': {
-        'title': 'GetContact',
-        'icon': '🔎',
-        'description': 'Paket GetContact untuk kebutuhan premium dengan proses jaspay.',
-        'items': [
-            {'id': 'getcontact_01', 'name': 'Jaspay - Akun Buyer', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': ['Jaspay', 'Akun dari buyer']},
-        ],
-        'category_notes': [],
-    },
-    'zoom': {
-        'title': 'Zoom',
-        'icon': '💻',
-        'description': 'Paket Zoom private untuk meeting dengan kapasitas hingga 100 peserta.',
-        'items': [
-            {'id': 'zoom_01', 'name': 'Private 100 Peserta', 'duration': '7 hari', 'price': 'Rp8.000', 'notes': []},
-            {'id': 'zoom_02', 'name': 'Private 100 Peserta', 'duration': '14 hari', 'price': 'Rp13.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'spotify': {
-        'title': 'Spotify',
-        'icon': '🎧',
-        'description': 'Pilihan paket Spotify dengan opsi full garansi, no garansi, dan link penawaran student.',
-        'items': [
-            {'id': 'spotify_01', 'name': 'Indplan', 'duration': '1 bulan', 'price': 'Rp22.000', 'notes': ['Full garansi']},
-            {'id': 'spotify_02', 'name': 'Indplan', 'duration': '3 bulan', 'price': 'Rp33.000', 'notes': ['Full garansi']},
-            {'id': 'spotify_03', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp21.000', 'notes': ['Full garansi']},
-            {'id': 'spotify_04', 'name': 'Famplan', 'duration': '3 bulan', 'price': 'Rp34.000', 'notes': ['Full garansi']},
-            {'id': 'spotify_05', 'name': 'Student', 'duration': '1 bulan', 'price': 'Rp13.000', 'notes': ['No garansi']},
-            {'id': 'spotify_06', 'name': 'Indplan', 'duration': '3 bulan', 'price': 'Rp17.000', 'notes': ['No garansi']},
-            {'id': 'spotify_07', 'name': 'Link Penawaran Student', 'duration': '1x proses', 'price': 'Rp6.000', 'notes': ['Akun dari buyer']},
-        ],
-        'category_notes': [],
-    },
-    'duolingo': {
-        'title': 'Duolingo',
-        'icon': '🗣️',
-        'description': 'Paket belajar premium Duolingo dengan opsi private, head, dan famplan.',
-        'items': [
-            {'id': 'duolingo_01', 'name': 'Private', 'duration': '1 bulan', 'price': 'Rp13.000', 'notes': []},
-            {'id': 'duolingo_02', 'name': 'Head', 'duration': '1 bulan', 'price': 'Rp18.000', 'notes': ['Bisa invite 5 akun']},
-            {'id': 'duolingo_03', 'name': 'Famplan', 'duration': '1 bulan', 'price': 'Rp11.000', 'notes': []},
-        ],
-        'category_notes': [],
-    },
-    'google_drive': {
-        'title': 'Google Drive',
-        'icon': '📁',
-        'description': 'Paket storage premium 5TB lengkap dengan bonus Gemini AI dan YouTube Premium.',
-        'items': [
-            {'id': 'gdrive_01', 'name': '5TB Bundle', 'duration': '1 bulan', 'price': 'Rp15.000', 'notes': []},
-        ],
-        'category_notes': ['Bonus Gemini AI', 'Bonus YouTube Premium'],
-        'category_note_title': 'Bonus',
-    },
-}
+import json
+
+LAST_CONFIG_MTIME = 0.0
+LAST_PRODUCTS_MTIME = 0.0
+
+PRODUCTS = {}
+CATEGORY_LOGOS = {}
+ITEM_LOOKUP = {}
+ITEM_ALIASES = {}
+
+def load_products():
+    products_path = BASE_DIR / 'admin' / 'products.json'
+    if products_path.exists():
+        try:
+            with open(products_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data
+        except Exception as e:
+            logger.warning('Failed to load products.json: %s', e)
+    return {}
+
+def load_config():
+    global STORE_NAME, WA_NUMBER, RESTART_DELAY_SECONDS, IDLE_RESET_SECONDS
+    config_path = BASE_DIR / 'admin' / 'config.json'
+    if config_path.exists():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                STORE_NAME = data.get('STORE_NAME', STORE_NAME)
+                WA_NUMBER = data.get('WA_NUMBER', WA_NUMBER)
+                RESTART_DELAY_SECONDS = max(int(data.get('RESTART_DELAY_SECONDS', RESTART_DELAY_SECONDS)), 1)
+                IDLE_RESET_SECONDS = max(int(data.get('IDLE_RESET_SECONDS', IDLE_RESET_SECONDS)), 60)
+        except Exception as e:
+            logger.warning('Failed to load config.json: %s', e)
+
+def reload_data_if_needed():
+    global LAST_CONFIG_MTIME, LAST_PRODUCTS_MTIME
+    global PRODUCTS, CATEGORY_LOGOS, ITEM_LOOKUP, ITEM_ALIASES
+    
+    config_path = BASE_DIR / 'admin' / 'config.json'
+    products_path = BASE_DIR / 'admin' / 'products.json'
+    
+    config_mtime = config_path.stat().st_mtime if config_path.exists() else 0.0
+    products_mtime = products_path.stat().st_mtime if products_path.exists() else 0.0
+    
+    needs_reload = False
+    if config_mtime != LAST_CONFIG_MTIME:
+        LAST_CONFIG_MTIME = config_mtime
+        load_config()
+        needs_reload = True
+        
+    if products_mtime != LAST_PRODUCTS_MTIME:
+        LAST_PRODUCTS_MTIME = products_mtime
+        PRODUCTS = load_products()
+        
+        # Rebuild logos
+        CATEGORY_LOGOS.clear()
+        for cat_key, cat_data in PRODUCTS.items():
+            if logo_rel := cat_data.get('logo', ''):
+                CATEGORY_LOGOS[cat_key] = BASE_DIR / logo_rel
+
+        # Rebuild lookups
+        ITEM_LOOKUP.clear()
+        ITEM_ALIASES.clear()
+        for category_key, category_data in PRODUCTS.items():
+            for item in category_data.get('items', []):
+                item_data = {
+                    'category_key': category_key,
+                    'category_title': category_data.get('title', ''),
+                    'category_icon': category_data.get('icon', ''),
+                    **item,
+                }
+                ITEM_LOOKUP[item['id']] = item_data
+                aliases = {
+                    normalize_text(item['id']),
+                    normalize_text(f"{category_data.get('title', '')} {item['name']}"),
+                    normalize_text(f"{category_data.get('title', '')} {item['name']} {item.get('duration', '')}"),
+                    normalize_text(f"{item['name']} {item.get('duration', '')}"),
+                }
+                plain_name = normalize_text(item['name'])
+                if plain_name not in GENERIC_ITEM_ALIASES:
+                    aliases.add(plain_name)
+                ITEM_ALIASES[item['id']] = aliases
+                
+        needs_reload = True
+        
+    if needs_reload:
+        main_menu_keyboard.cache_clear()
+        category_menu_keyboard.cache_clear()
+        netflix_choice_keyboard.cache_clear()
+        item_menu_keyboard.cache_clear()
+        order_keyboard.cache_clear()
+        welcome_text.cache_clear()
+        catalog_intro_text.cache_clear()
+        help_text.cache_clear()
+        netflix_prompt_text.cache_clear()
+        format_category_text.cache_clear()
+        format_item_text.cache_clear()
+        idle_reset_text.cache_clear()
 
 BOT_COMMANDS = [
     ('start', 'Buka menu utama'),
@@ -343,42 +239,14 @@ GENERIC_ITEM_ALIASES = {
     'jaspay',
 }
 
-
 def normalize_text(text: str) -> str:
     return ' '.join(''.join(ch.lower() if ch.isalnum() else ' ' for ch in text).split())
 
-
 def matches_alias(normalized_text: str, alias: str) -> bool:
     alias = normalize_text(alias)
-    if not alias:
-        return False
-    if ' ' in alias:
-        return alias in normalized_text
-    return alias in normalized_text.split()
+    return bool(alias and ((' ' in alias and alias in normalized_text) or alias in normalized_text.split()))
 
 
-ITEM_LOOKUP: dict[str, dict] = {}
-ITEM_ALIASES: dict[str, set[str]] = {}
-
-for category_key, category_data in PRODUCTS.items():
-    for item in category_data['items']:
-        item_data = {
-            'category_key': category_key,
-            'category_title': category_data['title'],
-            'category_icon': category_data['icon'],
-            **item,
-        }
-        ITEM_LOOKUP[item['id']] = item_data
-        aliases = {
-            normalize_text(item['id']),
-            normalize_text(f"{category_data['title']} {item['name']}"),
-            normalize_text(f"{category_data['title']} {item['name']} {item['duration']}"),
-            normalize_text(f"{item['name']} {item['duration']}"),
-        }
-        plain_name = normalize_text(item['name'])
-        if plain_name not in GENERIC_ITEM_ALIASES:
-            aliases.add(plain_name)
-        ITEM_ALIASES[item['id']] = aliases
 
 
 # =========================================================
@@ -436,9 +304,7 @@ def is_chat_idle(
 
 def get_logo_path(category_key: str) -> Path | None:
     logo_path = CATEGORY_LOGOS.get(category_key)
-    if not logo_path or not logo_path.exists():
-        return None
-    return logo_path
+    return logo_path if logo_path and logo_path.exists() else None
 
 
 async def clear_logo_message(
@@ -531,8 +397,10 @@ def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
             label = f"{item['duration']} | {item['price']}"
         rows.append([InlineKeyboardButton(label, callback_data=f"item_{item['id']}")])
 
-    rows.append([InlineKeyboardButton('⬅️ Kembali ke Kategori', callback_data='lihat_kategori')])
-    rows.append([InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')])
+    rows.extend([
+        [InlineKeyboardButton('⬅️ Kembali ke Kategori', callback_data='lihat_kategori')],
+        [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
+    ])
     return InlineKeyboardMarkup(rows)
 
 
@@ -574,11 +442,7 @@ def welcome_text() -> str:
         title='Apps Tersedia',
     )
 
-    benefit_box = make_text_box([
-        '• Harga santai',
-        '• Paket lengkap',
-        '• Bergaransi',
-    ], title='Kenapa Order Di Sini')
+    benefit_box = make_text_box(['• Harga santai', '• Paket lengkap', '• Bergaransi'], title='Kenapa Order Di Sini')
 
     return (
         f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n"
@@ -1239,6 +1103,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await query.answer('Aksi tidak dikenali.', show_alert=True)
 
 
+
+async def reload_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    reload_data_if_needed()
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.exception('Unhandled error while processing update', exc_info=context.error)
 
@@ -1259,6 +1127,7 @@ async def post_init(application: Application) -> None:
 
 
 def register_handlers(app: Application) -> None:
+    app.add_handler(TypeHandler(Update, reload_middleware), group=-1)
     app.add_handler(CommandHandler('start', start))
     app.add_handler(CommandHandler('menu', menu_command))
     app.add_handler(CommandHandler('help', help_command))
@@ -1302,6 +1171,7 @@ def run_bot() -> None:
 
 
 def main() -> None:
+    reload_data_if_needed()
     if not BOT_TOKEN:
         raise RuntimeError('BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable atau file .env.')
 

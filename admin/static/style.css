@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+:root {
+    --primary: #10b981;
+    --primary-hover: #059669;
+    --bg-dark: #0f172a;
+    --card-bg: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #cbd5e1;
+    --border: #334155;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--text-main) !important;
+}
+
+label, .form-label {
+    color: var(--text-main) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.navbar {
+    background: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    background: linear-gradient(to right, #34d399, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+}
+
+.card {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    color: var(--text-main);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.input-group-text {
+    background: var(--bg-dark) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+}
+
+.card-header {
+    background: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.form-control, .form-select {
+    background: var(--bg-dark) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+}
+
+.form-control:focus {
+    background: var(--bg-dark) !important;
+    box-shadow: 0 0 0 2px var(--primary);
+    border-color: var(--primary) !important;
+}
+
+.btn-primary {
+    background: var(--primary) !important;
+    border: none !important;
+    padding: 0.6rem 1.2rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover) !important;
+}
+
+.table {
+    color: var(--text-main) !important;
+}
+
+.table th {
+    background: transparent !important;
+    border-bottom: 2px solid var(--border) !important;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.table td {
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.badge {
+    padding: 0.5em 0.8em;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.product-card {
+    border: 1px solid var(--border);
+    background: var(--bg-dark) !important;
+}
+
+.btn-outline-light {
+    border-color: var(--border) !important;
+}
+
+.btn-outline-light:hover {
+    background: var(--border) !important;
+    color: var(--text-main) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.container {
+    opacity: 1 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}

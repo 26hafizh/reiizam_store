@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog"></i> Konfigurasi Bot
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="configForm" method="POST" action="/config">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Toko</label>
+                        <input type="text" class="form-control" name="store_name" value="{{ config.STORE_NAME }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nomor WhatsApp Admin</label>
+                        <input type="text" class="form-control" name="wa_number" value="{{ config.WA_NUMBER }}" required>
+                        <div class="form-text">Format: 628xxxxxxxxxx</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Delay Restart (detik)</label>
+                        <input type="number" class="form-control" name="restart_delay" value="{{ config.RESTART_DELAY_SECONDS }}" required>
+                        <div class="form-text">Waktu tunggu sebelum bot restart setelah crash</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Idle Reset Timeout (detik)</label>
+                        <input type="number" class="form-control" name="idle_reset" value="{{ config.IDLE_RESET_SECONDS }}" required>
+                        <div class="form-text">Waktu idle sebelum sesi di-reset (default: 900)</div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Simpan Konfigurasi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lock"></i> Ganti Password
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-20 text-danger small py-2">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ error }}
+                </div>
+                {% endif %}
+                <form id="passwordForm" method="POST" action="/change_password">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" placeholder="Masukkan username saat ini" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password Lama</label>
+                        <input type="password" class="form-control" name="old_pass" placeholder="••••••••" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password Baru</label>
+                        <input type="password" class="form-control" name="new_pass" placeholder="••••••••" required>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706) !important; box-shadow: none;">
+                            <i class="fas fa-key"></i> Update Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

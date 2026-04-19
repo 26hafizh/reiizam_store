@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Stat Cards -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fa-solid fa-layer-group text-primary fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 small fw-bold text-uppercase tracking-wider">Total Kategori</h6>
+                    <h3 class="mb-0 fw-bold">{{ num_categories }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fa-solid fa-box text-success fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 small fw-bold text-uppercase tracking-wider">Total Produk</h6>
+                    <h3 class="mb-0 fw-bold">{{ num_products }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fa-solid fa-clock text-info fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 small fw-bold text-uppercase tracking-wider">Sesi Timeout</h6>
+                    <h3 class="mb-0 fw-bold">{{ config.IDLE_RESET_SECONDS }}s</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-bolt me-2 text-warning"></i>Aksi Cepat</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">Kelola operasional toko dan bot Anda melalui menu di bawah ini.</p>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <a href="/products" class="btn btn-outline-light w-100 text-start p-3 product-card h-100 border-secondary">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa-solid fa-box-open text-primary fs-4 me-3"></i>
+                                <h6 class="fw-bold mb-0">Kelola Produk</h6>
+                            </div>
+                            <p class="small text-muted mb-0">Atur kategori, item, harga, dan durasi.</p>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="/config" class="btn btn-outline-light w-100 text-start p-3 product-card h-100 border-secondary">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa-solid fa-sliders text-info fs-4 me-3"></i>
+                                <h6 class="fw-bold mb-0">Setelan Bot</h6>
+                            </div>
+                            <p class="small text-muted mb-0">Ubah profil toko dan akses admin.</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Info -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-shop me-2 text-primary"></i>Profil Toko</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <label class="small text-muted d-block mb-1">Nama Toko</label>
+                    <div class="h5 fw-bold">{{ config.STORE_NAME }}</div>
+                </div>
+                <div class="mb-4">
+                    <label class="small text-muted d-block mb-1">WhatsApp Admin</label>
+                    <div class="h5 fw-bold text-success">{{ config.WA_NUMBER }}</div>
+                </div>
+                <div class="pt-2 border-top border-secondary border-opacity-25 mt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="small text-muted">Restart Delay</span>
+                        <span class="small fw-bold">{{ config.RESTART_DELAY_SECONDS }}s</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="small text-muted">Auth User</span>
+                        <span class="small fw-bold">{{ config.ADMIN_USER }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-scale {
+    transition: transform 0.2s;
+}
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+</style>
+{% endblock %}
