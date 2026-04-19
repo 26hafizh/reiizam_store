@@ -154,6 +154,14 @@ def reload_data_if_needed():
     products_mtime = products_path.stat().st_mtime if products_path.exists() else 0.0
     
     needs_reload = False
+    
+    # Force reload if PRODUCTS is empty, even if mtime hasn't changed
+    if not PRODUCTS and products_path.exists():
+        logger.info('PRODUCTS is empty, forcing initial load from %s', products_path)
+        PRODUCTS = load_products()
+        LAST_PRODUCTS_MTIME = products_mtime
+        needs_reload = True
+
     if config_mtime != LAST_CONFIG_MTIME:
         LAST_CONFIG_MTIME = config_mtime
         load_config()
