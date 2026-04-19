@@ -37,7 +37,7 @@
                             <span class="fs-3 me-3">{{ cat.icon }}</span>
                             <div>
                                 <h5 class="fw-bold mb-0 text-white">{{ cat.title }}</h5>
-                                <small class="text-muted">{{ cat.items|length }} Item tersedia</small>
+                                <small class="text-muted">{{ cat['items']|length }} Item tersedia</small>
                             </div>
                         </div>
                         <div class="dropdown">
@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="row g-2">
-                    {% for item in cat.items %}
+                    {% for item in cat['items'] %}
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card p-3 h-100 product-item-card">
                             <div class="d-flex justify-content-between align-items-start mb-2">
