@@ -27,59 +27,19 @@ from telegram.ext import (
     filters,
 )
 
-# =========================================================
-# KONFIGURASI
-# =========================================================
+import shared_data
+from shared_data import PRODUCTS, CONFIG, ITEM_LOOKUP, ITEM_ALIASES, GENERIC_ITEM_ALIASES, on_data_change_callbacks
 
+def STORE_NAME(): return shared_data.CONFIG.get('STORE_NAME', 'Store')
+def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '62882000414738')
+def IDLE_RESET_SECONDS(): return int(shared_data.CONFIG.get('IDLE_RESET_SECONDS', 900))
 
-def load_local_env() -> None:
-    env_candidates = [
-        Path('.env'),
-        Path(__file__).resolve().with_name('.env'),
-    ]
-
-    for env_path in env_candidates:
-        if not env_path.exists():
-            continue
-
-        for raw_line in env_path.read_text(encoding='utf-8').splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith('#') or '=' not in line:
-                continue
-
-            key, value = line.split('=', 1)
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            os.environ.setdefault(key, value)
-        return
-
-
-load_local_env()
-
-
-def get_int_env(name: str, default: int) -> int:
-    raw_value = (os.getenv(name, str(default)) or str(default)).strip()
-    try:
-        return int(raw_value)
-    except ValueError:
-        logging.getLogger(__name__).warning(
-            'Nilai %s=%r tidak valid. Menggunakan default %s.',
-            name,
-            raw_value,
-            default,
-        )
-        return default
-
-
-BOT_TOKEN = os.getenv('BOT_TOKEN', '').strip()
-WA_NUMBER = os.getenv('WA_NUMBER', '62882000414738').strip()
-STORE_NAME = os.getenv('STORE_NAME', 'reiizam store').strip()
-RESTART_DELAY_SECONDS = max(get_int_env('RESTART_DELAY_SECONDS', 5), 1)
-IDLE_RESET_SECONDS = max(get_int_env('IDLE_RESET_SECONDS', 900), 60)
-
-UI_FEEDBACK_DELAY = 0.28
-DOUBLE_CLICK_GUARD_SECONDS = 1.2
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 MAX_TELEGRAM_CAPTION_LENGTH = 1024
+
+# =========================================================
+# LOGGING
+# =========================================================
 
 logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
@@ -102,134 +62,8 @@ CATEGORY_LOGOS = {
     'wink': LOGO_DIR / 'wink.jpg',
 }
 
-# =========================================================
-# DATA PRODUK - Loaded from admin/products.json
-# =========================================================
-import json
-
-LAST_CONFIG_MTIME = 0.0
-LAST_PRODUCTS_MTIME = 0.0
-
-PRODUCTS = {}
-CATEGORY_LOGOS = {}
-ITEM_LOOKUP = {}
-ITEM_ALIASES = {}
-
-def load_products():
-    products_path = BASE_DIR / 'admin' / 'products.json'
-    if products_path.exists():
-        try:
-            with open(products_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                logger.info('Successfully loaded %d categories from products.json', len(data))
-                return data
-        except Exception as e:
-            logger.error('Failed to load products.json: %s', e)
-    else:
-        logger.warning('products.json not found at %s', products_path)
-    return {}
-
-def load_config():
-    global STORE_NAME, WA_NUMBER, RESTART_DELAY_SECONDS, IDLE_RESET_SECONDS
-    config_path = BASE_DIR / 'admin' / 'config.json'
-    if config_path.exists():
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                STORE_NAME = data.get('STORE_NAME', STORE_NAME)
-                WA_NUMBER = data.get('WA_NUMBER', WA_NUMBER)
-                RESTART_DELAY_SECONDS = max(int(data.get('RESTART_DELAY_SECONDS', RESTART_DELAY_SECONDS)), 1)
-                IDLE_RESET_SECONDS = max(int(data.get('IDLE_RESET_SECONDS', IDLE_RESET_SECONDS)), 60)
-        except Exception as e:
-            logger.warning('Failed to load config.json: %s', e)
-
-def reload_data_if_needed():
-    global LAST_CONFIG_MTIME, LAST_PRODUCTS_MTIME
-    global PRODUCTS, CATEGORY_LOGOS, ITEM_LOOKUP, ITEM_ALIASES
-    
-    config_path = BASE_DIR / 'admin' / 'config.json'
-    products_path = BASE_DIR / 'admin' / 'products.json'
-    
-    config_mtime = config_path.stat().st_mtime if config_path.exists() else 0.0
-    products_mtime = products_path.stat().st_mtime if products_path.exists() else 0.0
-    
-    needs_reload = False
-    
-    # Force reload if PRODUCTS is empty, even if mtime hasn't changed
-    if not PRODUCTS and products_path.exists():
-        logger.info('PRODUCTS is empty, forcing initial load from %s', products_path)
-        PRODUCTS = load_products()
-        LAST_PRODUCTS_MTIME = products_mtime
-        needs_reload = True
-
-    if config_mtime != LAST_CONFIG_MTIME:
-        LAST_CONFIG_MTIME = config_mtime
-        load_config()
-        needs_reload = True
-        
-    if products_mtime != LAST_PRODUCTS_MTIME:
-        LAST_PRODUCTS_MTIME = products_mtime
-        PRODUCTS = load_products()
-        
-        # Rebuild logos
-        CATEGORY_LOGOS.clear()
-        for cat_key, cat_data in PRODUCTS.items():
-            logo_val = cat_data.get('logo', '')
-            if not logo_val:
-                continue
-                
-            if logo_val.startswith('data:image/'):
-                # Base64 logo
-                try:
-                    header, encoded = logo_val.split(',', 1)
-                    CATEGORY_LOGOS[cat_key] = BytesIO(base64.b64decode(encoded))
-                except Exception as e:
-                    logger.warning('Failed to decode base64 logo for %s: %s', cat_key, e)
-            else:
-                # File path logo
-                path = BASE_DIR / logo_val
-                if path.exists():
-                    CATEGORY_LOGOS[cat_key] = path
-
-        # Rebuild lookups
-        ITEM_LOOKUP.clear()
-        ITEM_ALIASES.clear()
-        for category_key, category_data in PRODUCTS.items():
-            for item in category_data.get('items', []):
-                item_data = {
-                    'category_key': category_key,
-                    'category_title': category_data.get('title', ''),
-                    'category_icon': category_data.get('icon', ''),
-                    **item,
-                }
-                ITEM_LOOKUP[item['id']] = item_data
-                aliases = {
-                    normalize_text(item['id']),
-                    normalize_text(f"{category_data.get('title', '')} {item['name']}"),
-                    normalize_text(f"{category_data.get('title', '')} {item['name']} {item.get('duration', '')}"),
-                    normalize_text(f"{item['name']} {item.get('duration', '')}"),
-                }
-                plain_name = normalize_text(item['name'])
-                if plain_name not in GENERIC_ITEM_ALIASES:
-                    aliases.add(plain_name)
-                ITEM_ALIASES[item['id']] = aliases
-        
-        logger.info('Data reloaded: %d items in %d categories.', len(ITEM_LOOKUP), len(PRODUCTS))
-        needs_reload = True
-        
-    if needs_reload:
-        main_menu_keyboard.cache_clear()
-        category_menu_keyboard.cache_clear()
-        netflix_choice_keyboard.cache_clear()
-        item_menu_keyboard.cache_clear()
-        order_keyboard.cache_clear()
-        welcome_text.cache_clear()
-        catalog_intro_text.cache_clear()
-        help_text.cache_clear()
-        netflix_prompt_text.cache_clear()
-        format_category_text.cache_clear()
-        format_item_text.cache_clear()
-        idle_reset_text.cache_clear()
+UI_FEEDBACK_DELAY = 0.28
+DOUBLE_CLICK_GUARD_SECONDS = 1.2
 
 BOT_COMMANDS = [
     ('start', 'Buka menu utama'),
@@ -1192,27 +1026,23 @@ def run_bot() -> None:
     )
 
 
-def main() -> None:
-    reload_data_if_needed()
-    if not BOT_TOKEN:
-        raise RuntimeError('BOT_TOKEN belum diisi. Tambahkan BOT_TOKEN di environment variable atau file .env.')
+def clear_caches():
+    main_menu_keyboard.cache_clear()
+    category_menu_keyboard.cache_clear()
+    netflix_choice_keyboard.cache_clear()
+    item_menu_keyboard.cache_clear()
+    order_keyboard.cache_clear()
+    welcome_text.cache_clear()
+    catalog_intro_text.cache_clear()
+    help_text.cache_clear()
+    netflix_prompt_text.cache_clear()
+    format_category_text.cache_clear()
+    format_item_text.cache_clear()
+    idle_reset_text.cache_clear()
 
-    while True:
-        try:
-            logger.info('Starting bot for store: %s', STORE_NAME)
-            run_bot()
-            logger.warning(
-                'Polling loop berhenti. Mencoba menjalankan ulang dalam %s detik.',
-                RESTART_DELAY_SECONDS,
-            )
-        except (KeyboardInterrupt, SystemExit):
-            logger.info('Bot dihentikan secara manual.')
-            break
-        except Exception:
-            logger.exception('Bot crash. Mencoba restart ulang dalam %s detik.', RESTART_DELAY_SECONDS)
+on_data_change_callbacks.append(clear_caches)
 
-        time.sleep(RESTART_DELAY_SECONDS)
-
-
-if __name__ == '__main__':
-    main()
+def get_application():
+    app = build_application()
+    register_handlers(app)
+    return app
