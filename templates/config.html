@@ -7,7 +7,6 @@
         <p class="text-muted small">Kelola identitas toko dan keamanan akses.</p>
     </div>
 
-    <!-- Shop Config -->
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
@@ -37,7 +36,6 @@
         </div>
     </div>
 
-    <!-- Security -->
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
@@ -46,15 +44,20 @@
             </div>
             <div class="card-body p-4">
                 <form id="passwordForm">
+                    {% if password_managed_by_env %}
+                    <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 text-warning small">
+                        Password admin sedang dikelola dari environment server, jadi tidak bisa diubah dari panel ini.
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">PASSWORD LAMA</label>
-                        <input type="password" class="form-control" name="old_pass" placeholder="••••••••" required>
+                        <input type="password" class="form-control" name="old_pass" placeholder="Masukkan password lama" {% if password_managed_by_env %}disabled{% else %}required{% endif %}>
                     </div>
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-muted">PASSWORD BARU</label>
-                        <input type="password" class="form-control" name="new_pass" placeholder="••••••••" required>
+                        <input type="password" class="form-control" name="new_pass" placeholder="Minimal 8 karakter" {% if password_managed_by_env %}disabled{% else %}required{% endif %}>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, var(--warning), #d97706) !important;">
+                    <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, var(--warning), #d97706) !important;" {% if password_managed_by_env %}disabled{% endif %}>
                         <i class="fa-solid fa-key me-2"></i>Ganti Password
                     </button>
                 </form>

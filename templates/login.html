@@ -51,12 +51,12 @@
         </div>
         {% endif %}
 
-        <form method="post" action="/login">
+        <form method="post" action="{{ admin_login_url }}">
             <div class="mb-3">
                 <label class="form-label small fw-bold text-muted">USERNAME</label>
                 <div class="input-group">
                     <span class="input-group-text bg-black border-secondary border-opacity-25 text-muted"><i class="fa-solid fa-user"></i></span>
-                    <input type="text" class="form-control border-start-0" name="username" placeholder="admin" required>
+                    <input type="text" class="form-control border-start-0" name="username" placeholder="owner" required>
                 </div>
             </div>
             <div class="mb-4">

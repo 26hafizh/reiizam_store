@@ -2,6 +2,9 @@
 // REIIZAM ADMIN - PREMIUM SCRIPT
 // ===================================================
 
+const ADMIN_BASE_PATH = window.ADMIN_BASE_PATH || document.body?.dataset.adminBase || '';
+const adminUrl = (path) => `${ADMIN_BASE_PATH}${path}`;
+
 const API = {
     post: async (url, data) => {
         const resp = await fetch(url, {
@@ -50,7 +53,7 @@ const openEditCategory = (key, title, icon, description, logo) => {
 const saveCategory = async () => {
     const f = new FormData(document.getElementById('catForm'));
     const data = Object.fromEntries(f.entries());
-    const url = data.key ? '/api/category/edit' : '/api/category/add';
+    const url = data.key ? adminUrl('/api/category/edit') : adminUrl('/api/category/add');
     try {
         await API.post(url, data);
         toast('Kategori berhasil disimpan!');
@@ -60,7 +63,7 @@ const saveCategory = async () => {
 const deleteCategory = async (key) => {
     if (!confirm('Hapus kategori ini? Semua produk di dalamnya akan ikut terhapus.')) return;
     try {
-        await API.post('/api/category/delete', { key });
+        await API.post(adminUrl('/api/category/delete'), { key });
         toast('Kategori berhasil dihapus!');
     } catch (e) { alert(e.message); }
 };
@@ -93,7 +96,7 @@ const saveItem = async () => {
     const f = new FormData(document.getElementById('itemForm'));
     const data = Object.fromEntries(f.entries());
     const isEdit = document.getElementById('itemId').readOnly;
-    const url = isEdit ? '/api/item/edit' : '/api/item/add';
+    const url = isEdit ? adminUrl('/api/item/edit') : adminUrl('/api/item/add');
     try {
         await API.post(url, data);
         toast('Item berhasil disimpan!');
@@ -103,7 +106,7 @@ const saveItem = async () => {
 const deleteItem = async (cat_key, item_id) => {
     if (!confirm('Hapus item ini?')) return;
     try {
-        await API.post('/api/item/delete', { cat_key, item_id });
+        await API.post(adminUrl('/api/item/delete'), { cat_key, item_id });
         toast('Item berhasil dihapus!');
     } catch (e) { alert(e.message); }
 };
@@ -113,15 +116,16 @@ const deleteItem = async (cat_key, item_id) => {
 document.getElementById('configForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-        await API.post('/api/config/save', Object.fromEntries(new FormData(e.target)));
+        await API.post(adminUrl('/api/config/save'), Object.fromEntries(new FormData(e.target)));
         toast('Konfigurasi disimpan!');
     } catch (e) { alert(e.message); }
 });
 
 document.getElementById('passwordForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (e.target.querySelector('[name="new_pass"]')?.disabled) return;
     try {
-        const res = await API.post('/api/config/password', Object.fromEntries(new FormData(e.target)));
+        const res = await API.post(adminUrl('/api/config/password'), Object.fromEntries(new FormData(e.target)));
         toast(res.message);
     } catch (e) { alert(e.message); }
 });

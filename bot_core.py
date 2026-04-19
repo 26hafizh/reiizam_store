@@ -1,19 +1,16 @@
-from __future__ import annotations
-
-
 import asyncio
+import base64
 import logging
 import os
 import time
 from contextlib import suppress
 from functools import lru_cache
 from html import escape
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
-from io import BytesIO
-import base64
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -28,11 +25,45 @@ from telegram.ext import (
 )
 
 import shared_data
-from shared_data import PRODUCTS, CONFIG, ITEM_LOOKUP, ITEM_ALIASES, GENERIC_ITEM_ALIASES, on_data_change_callbacks
+from shared_data import (
+    CATEGORY_ALIASES,
+    ITEM_ALIASES,
+    ITEM_LOOKUP,
+    PRODUCTS,
+    on_data_change_callbacks,
+)
 
 def STORE_NAME(): return shared_data.CONFIG.get('STORE_NAME', 'Store')
 def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '62882000414738')
 def IDLE_RESET_SECONDS(): return int(shared_data.CONFIG.get('IDLE_RESET_SECONDS', 900))
+
+
+def PUBLIC_BASE_URL() -> str:
+    raw = (
+        os.getenv('PUBLIC_BASE_URL')
+        or os.getenv('RAILWAY_PUBLIC_DOMAIN')
+        or os.getenv('RAILWAY_STATIC_URL')
+        or ''
+    ).strip()
+    if not raw:
+        return ''
+    if raw.startswith('http://'):
+        return ''
+    if raw.startswith('https://'):
+        return raw.rstrip('/')
+    return f"https://{raw.lstrip('/')}".rstrip('/')
+
+
+def ADMIN_TELEGRAM_ID() -> int | None:
+    value = os.getenv('ADMIN_TELEGRAM_ID')
+    if value in (None, ''):
+        value = shared_data.CONFIG.get('ADMIN_TELEGRAM_ID')
+    if value in (None, ''):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 MAX_TELEGRAM_CAPTION_LENGTH = 1024
@@ -71,35 +102,21 @@ BOT_COMMANDS = [
     ('produk', 'Lihat katalog produk'),
     ('help', 'Cara pakai bot'),
 ]
-
-CATEGORY_ALIASES = {
-    'canva': ['canva'],
-    'chatgpt': ['chatgpt', 'chat gpt', 'gpt', 'openai'],
-    'youtube': ['youtube', 'youtube premium', 'yt'],
-    'netflix_harian': ['netflix harian', 'netflix daily', 'harian netflix'],
-    'netflix_bulanan': ['netflix bulanan', 'netflix monthly', 'bulanan netflix'],
-    'apple_music': ['apple music', 'music apple'],
-    'alight_motion': ['alight motion', 'alight'],
-    'wink': ['wink'],
-    'capcut': ['capcut', 'cap cut'],
-    'getcontact': ['getcontact', 'get contact'],
-    'zoom': ['zoom'],
-    'spotify': ['spotify', 'spoti'],
-    'duolingo': ['duolingo', 'duo lingo'],
-    'google_drive': ['google drive', 'gdrive', 'drive google'],
+EXTRA_CATEGORY_ALIASES = {
+    'chatgpt': {'chat gpt', 'gpt', 'openai'},
+    'youtube': {'youtube premium', 'yt'},
+    'netflix_harian': {'netflix daily', 'harian netflix'},
+    'netflix_bulanan': {'netflix monthly', 'bulanan netflix'},
+    'apple_music': {'music apple'},
+    'alight_motion': {'alight'},
+    'capcut': {'cap cut'},
+    'getcontact': {'get contact'},
+    'spotify': {'spoti'},
+    'duolingo': {'duo lingo'},
+    'google_drive': {'gdrive', 'drive google'},
 }
-
-GENERIC_ITEM_ALIASES = {
-    'owner',
-    'member pro',
-    'private',
-    'head',
-    'famplan',
-    'indplan',
-    'student',
-    'sharing',
-    'jaspay',
-}
+ADMIN_CALLBACK_PREFIX = 'admin:'
+ADMIN_PENDING_KEY = 'admin_pending'
 
 def normalize_text(text: str) -> str:
     return ' '.join(''.join(ch.lower() if ch.isalnum() else ' ' for ch in text).split())
@@ -164,11 +181,70 @@ def is_chat_idle(
     return (now - last_seen) >= IDLE_RESET_SECONDS()
 
 
+def is_private_chat(update: Update) -> bool:
+    return bool(update.effective_chat and update.effective_chat.type == 'private')
+
+
+def is_admin_user(user_id: int | None) -> bool:
+    return bool(user_id is not None and ADMIN_TELEGRAM_ID() == user_id)
+
+
+def get_admin_pending(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> dict | None:
+    return get_chat_state(context, chat_id, user_id).get(ADMIN_PENDING_KEY)
+
+
+def set_admin_pending(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    action: str,
+    user_id: int | None = None,
+    **payload,
+) -> None:
+    chat_state = get_chat_state(context, chat_id, user_id)
+    chat_state[ADMIN_PENDING_KEY] = {'action': action, **payload}
+
+
+def clear_admin_pending(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    user_id: int | None = None,
+) -> None:
+    get_chat_state(context, chat_id, user_id).pop(ADMIN_PENDING_KEY, None)
+
+
 def get_logo_data(category_key: str):
-    logo_data = CATEGORY_LOGOS.get(category_key)
-    if isinstance(logo_data, Path):
-        return logo_data if logo_data.exists() else None
-    return logo_data  # Could be BytesIO or None
+    category_data = PRODUCTS.get(category_key, {})
+    raw_logo = str(category_data.get('logo', '') or '').strip()
+
+    if raw_logo.startswith('data:image/') and ',' in raw_logo:
+        _, encoded = raw_logo.split(',', 1)
+        try:
+            binary = base64.b64decode(encoded)
+            buffer = BytesIO(binary)
+            buffer.name = f'{category_key}.jpg'
+            buffer.seek(0)
+            return buffer
+        except Exception:
+            logger.warning('Logo base64 kategori %s tidak valid.', category_key, exc_info=True)
+
+    if raw_logo.startswith(('http://', 'https://')):
+        return raw_logo
+
+    if raw_logo:
+        logo_path = Path(raw_logo)
+        if not logo_path.is_absolute():
+            logo_path = BASE_DIR / raw_logo
+        if logo_path.exists():
+            return logo_path
+
+    fallback_logo = CATEGORY_LOGOS.get(category_key)
+    if isinstance(fallback_logo, Path):
+        return fallback_logo if fallback_logo.exists() else None
+    return fallback_logo
 
 
 async def clear_logo_message(
@@ -199,11 +275,25 @@ async def ensure_logo_message(
 # =========================================================
 
 
-def build_admin_url(message: str | None = None) -> str:
+def build_whatsapp_url(message: str | None = None) -> str:
     wa = WA_NUMBER()
     if not message:
         return f'https://wa.me/{wa}'
     return f'https://wa.me/{wa}?text={quote(message)}'
+
+
+def build_whatsapp_app_url(message: str | None = None) -> str:
+    wa = WA_NUMBER()
+    if not message:
+        return f'whatsapp://send?phone={wa}'
+    return f'whatsapp://send?phone={wa}&text={quote(message)}'
+
+
+def build_order_launch_url(item_id: str) -> str | None:
+    base_url = PUBLIC_BASE_URL()
+    if not base_url:
+        return None
+    return f'{base_url}/order/{quote(item_id)}'
 
 
 def build_order_message(item_id: str) -> str:
@@ -221,6 +311,19 @@ def build_order_message(item_id: str) -> str:
         "━━━━━━━━━━━━━━━━━━\n"
         "Apakah stok ready min? Mohon infonya ya, terima kasih! 🙏"
     )
+
+
+def build_order_launch_context(item_id: str) -> dict[str, str]:
+    item = ITEM_LOOKUP[item_id]
+    order_text = build_order_message(item_id)
+    return {
+        'store_name': STORE_NAME(),
+        'item_name': item['name'],
+        'category_title': item['category_title'],
+        'order_text': order_text,
+        'wa_app_url': build_whatsapp_app_url(order_text),
+        'wa_url': build_whatsapp_url(order_text),
+    }
 
 
 def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[InlineKeyboardButton]]:
@@ -280,12 +383,211 @@ def item_menu_keyboard(category_key: str) -> InlineKeyboardMarkup:
 @lru_cache(maxsize=None)
 def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
     item = ITEM_LOOKUP[item_id]
+    launch_url = build_order_launch_url(item_id)
+    order_button = (
+        InlineKeyboardButton('✅ Order via WhatsApp', web_app=WebAppInfo(url=launch_url))
+        if launch_url
+        else InlineKeyboardButton('✅ Order via WhatsApp', url=build_whatsapp_url(build_order_message(item_id)))
+    )
+    return InlineKeyboardMarkup(
+        [
+            [order_button],
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
+            [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
+        ]
+    )
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton('✅ Order via WhatsApp', url=build_admin_url(build_order_message(item_id)))],
             [InlineKeyboardButton('⬅️ Kembali', callback_data=f"cat_{item['category_key']}")],
             [InlineKeyboardButton('🏠 Menu Utama', callback_data='menu')],
         ]
+    )
+
+
+@lru_cache(maxsize=1)
+def admin_menu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton('📦 Produk', callback_data=f'{ADMIN_CALLBACK_PREFIX}products'),
+                InlineKeyboardButton('💰 Harga', callback_data=f'{ADMIN_CALLBACK_PREFIX}prices'),
+            ],
+            [InlineKeyboardButton('📲 WA Number', callback_data=f'{ADMIN_CALLBACK_PREFIX}config')],
+            [InlineKeyboardButton('❌ Tutup', callback_data=f'{ADMIN_CALLBACK_PREFIX}close')],
+        ]
+    )
+
+
+@lru_cache(maxsize=1)
+def admin_products_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton('➕ Tambah Produk', callback_data=f'{ADMIN_CALLBACK_PREFIX}product:add'),
+                InlineKeyboardButton('🗑 Hapus Produk', callback_data=f'{ADMIN_CALLBACK_PREFIX}product:delete'),
+            ],
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=f'{ADMIN_CALLBACK_PREFIX}home')],
+        ]
+    )
+
+
+@lru_cache(maxsize=1)
+def admin_prices_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton('➕ Tambah Harga', callback_data=f'{ADMIN_CALLBACK_PREFIX}price:add'),
+                InlineKeyboardButton('✏️ Edit Harga', callback_data=f'{ADMIN_CALLBACK_PREFIX}price:edit'),
+            ],
+            [InlineKeyboardButton('🗑 Hapus Harga', callback_data=f'{ADMIN_CALLBACK_PREFIX}price:delete')],
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=f'{ADMIN_CALLBACK_PREFIX}home')],
+        ]
+    )
+
+
+@lru_cache(maxsize=1)
+def admin_config_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton('📲 Ganti WA Number', callback_data=f'{ADMIN_CALLBACK_PREFIX}config:wa')],
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=f'{ADMIN_CALLBACK_PREFIX}home')],
+        ]
+    )
+
+
+def admin_prompt_keyboard(back_callback: str = f'{ADMIN_CALLBACK_PREFIX}home') -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton('⬅️ Kembali', callback_data=back_callback)],
+            [InlineKeyboardButton('❌ Batal Input', callback_data=f'{ADMIN_CALLBACK_PREFIX}cancel')],
+        ]
+    )
+
+
+def admin_category_picker_keyboard(action: str) -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(
+            f"{data.get('icon', '📦')} {data.get('title', key)}",
+            callback_data=f'{ADMIN_CALLBACK_PREFIX}{action}:{key}',
+        )
+        for key, data in PRODUCTS.items()
+    ]
+    rows = chunk_buttons(buttons, 2) if buttons else []
+    rows.append([InlineKeyboardButton('⬅️ Kembali', callback_data=f'{ADMIN_CALLBACK_PREFIX}home')])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_item_picker_keyboard(category_key: str, action: str) -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(
+            f"{item['name']} | {item['price']}",
+            callback_data=f'{ADMIN_CALLBACK_PREFIX}{action}:{item["id"]}',
+        )
+        for item in PRODUCTS[category_key].get('items', [])
+    ]
+    rows = [[button] for button in buttons] if buttons else []
+    rows.append([InlineKeyboardButton('⬅️ Kembali', callback_data=f'{ADMIN_CALLBACK_PREFIX}prices')])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_confirm_keyboard(confirm_callback: str, back_callback: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton('✅ Ya, lanjutkan', callback_data=confirm_callback)],
+            [InlineKeyboardButton('⬅️ Batal', callback_data=back_callback)],
+        ]
+    )
+
+
+def admin_home_text() -> str:
+    admin_id = ADMIN_TELEGRAM_ID()
+    return (
+        '<b>🔐 Panel Admin Telegram</b>\n'
+        f'<i>Akses terkunci untuk Telegram ID: <code>{admin_id}</code></i>\n'
+        '\n'
+        'Pilih aksi yang ingin kamu lakukan. Semua perubahan akan langsung disimpan ke data bot tanpa perlu redeploy.'
+    )
+
+
+def admin_products_text() -> str:
+    return (
+        '<b>📦 Kelola Produk</b>\n'
+        '\n'
+        'Produk di sini adalah kategori utama seperti ChatGPT, Netflix, Canva, dan lainnya.'
+    )
+
+
+def admin_prices_text() -> str:
+    return (
+        '<b>💰 Kelola Harga</b>\n'
+        '\n'
+        'Harga di sini adalah paket/item di dalam tiap produk, misalnya durasi dan nominal paket.'
+    )
+
+
+def admin_config_text() -> str:
+    return (
+        '<b>📲 Konfigurasi Admin</b>\n'
+        f'Nomor WhatsApp aktif saat ini: <code>{escape(WA_NUMBER())}</code>\n'
+        '\n'
+        'Pilih pengaturan yang ingin diubah.'
+    )
+
+
+def admin_add_product_prompt() -> str:
+    return (
+        '<b>➕ Tambah Produk Baru</b>\n'
+        '\n'
+        'Kirim data dengan 2-4 baris:\n'
+        '1. Nama produk\n'
+        '2. Icon emoji\n'
+        '3. Deskripsi singkat\n'
+        '4. Logo path/url/base64 opsional\n'
+        '\n'
+        '<i>Contoh:</i>\n'
+        '<code>Prime Video\n🎬\nPaket streaming premium\nassets/logos/prime.jpg</code>'
+    )
+
+
+def admin_add_price_prompt(category_key: str) -> str:
+    title = PRODUCTS[category_key]['title']
+    return (
+        f'<b>➕ Tambah Harga untuk {escape(title)}</b>\n'
+        '\n'
+        'Kirim data dengan 4 baris:\n'
+        '1. ID unik item\n'
+        '2. Nama paket\n'
+        '3. Durasi\n'
+        '4. Harga\n'
+        '\n'
+        '<i>Contoh:</i>\n'
+        '<code>prime_01\nPrivate\n1 bulan\nRp25.000</code>'
+    )
+
+
+def admin_edit_price_prompt(item_id: str) -> str:
+    item = ITEM_LOOKUP[item_id]
+    return (
+        f'<b>✏️ Edit Harga {escape(item["name"])}</b>\n'
+        f'<i>ID: <code>{escape(item_id)}</code></i>\n'
+        '\n'
+        'Kirim data dengan 3 baris:\n'
+        '1. Nama paket\n'
+        '2. Durasi\n'
+        '3. Harga\n'
+        '\n'
+        '<i>Contoh:</i>\n'
+        '<code>Private\n1 bulan\nRp27.000</code>'
+    )
+
+
+def admin_change_wa_prompt() -> str:
+    return (
+        '<b>📲 Ganti WA Number</b>\n'
+        '\n'
+        'Kirim nomor WhatsApp baru dengan format internasional tanpa tanda <code>+</code>.\n'
+        '<i>Contoh: <code>6281234567890</code></i>'
     )
 
 
@@ -557,7 +859,8 @@ def is_duplicate_callback(
 def match_category_by_text(text: str) -> str | None:
     normalized = normalize_text(text)
     for category_key, aliases in CATEGORY_ALIASES.items():
-        for alias in aliases:
+        combined_aliases = set(aliases) | EXTRA_CATEGORY_ALIASES.get(category_key, set())
+        for alias in combined_aliases:
             if matches_alias(normalized, alias):
                 return category_key
     return None
@@ -570,6 +873,224 @@ def match_item_by_text(text: str) -> str | None:
             if alias and matches_alias(normalized, alias):
                 return item_id
     return None
+
+
+def split_input_lines(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def normalize_phone_number(text: str) -> str:
+    return ''.join(ch for ch in text if ch.isdigit())
+
+
+def create_category_from_input(lines: list[str]) -> str:
+    if len(lines) < 2:
+        raise ValueError('Minimal kirim nama produk dan icon emoji.')
+
+    title = lines[0]
+    icon = lines[1]
+    description = lines[2] if len(lines) >= 3 else ''
+    logo = lines[3] if len(lines) >= 4 else ''
+    category_key = shared_data.slugify_key(title)
+
+    if category_key in PRODUCTS:
+        raise ValueError(f'Produk dengan key {category_key} sudah ada.')
+
+    PRODUCTS[category_key] = {
+        'title': title,
+        'icon': icon,
+        'description': description,
+        'items': [],
+        'category_notes': [],
+        'logo': logo,
+    }
+    shared_data.save_products(PRODUCTS)
+    return category_key
+
+
+def delete_category_by_key(category_key: str) -> None:
+    if category_key not in PRODUCTS:
+        raise ValueError('Produk tidak ditemukan.')
+
+    PRODUCTS.pop(category_key, None)
+    shared_data.save_products(PRODUCTS)
+
+
+def create_item_from_input(category_key: str, lines: list[str]) -> str:
+    if category_key not in PRODUCTS:
+        raise ValueError('Produk tidak ditemukan.')
+    if len(lines) < 4:
+        raise ValueError('Kirim 4 baris: ID, nama paket, durasi, harga.')
+
+    item_id = shared_data.slugify_key(lines[0])
+    if item_id in ITEM_LOOKUP:
+        raise ValueError(f'ID item {item_id} sudah dipakai.')
+
+    PRODUCTS[category_key]['items'].append({
+        'id': item_id,
+        'name': lines[1],
+        'duration': lines[2],
+        'price': lines[3],
+        'notes': [],
+    })
+    shared_data.save_products(PRODUCTS)
+    return item_id
+
+
+def update_item_from_input(item_id: str, lines: list[str]) -> None:
+    if item_id not in ITEM_LOOKUP:
+        raise ValueError('Item tidak ditemukan.')
+    if len(lines) < 3:
+        raise ValueError('Kirim 3 baris: nama paket, durasi, harga.')
+
+    category_key = ITEM_LOOKUP[item_id]['category_key']
+    for item in PRODUCTS[category_key].get('items', []):
+        if item['id'] == item_id:
+            item['name'] = lines[0]
+            item['duration'] = lines[1]
+            item['price'] = lines[2]
+            shared_data.save_products(PRODUCTS)
+            return
+
+    raise ValueError('Item tidak ditemukan di kategori.')
+
+
+def delete_item_by_id(item_id: str) -> None:
+    if item_id not in ITEM_LOOKUP:
+        raise ValueError('Item tidak ditemukan.')
+
+    category_key = ITEM_LOOKUP[item_id]['category_key']
+    PRODUCTS[category_key]['items'] = [
+        item for item in PRODUCTS[category_key].get('items', [])
+        if item['id'] != item_id
+    ]
+    shared_data.save_products(PRODUCTS)
+
+
+async def handle_admin_pending_text(
+    message,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> bool:
+    user_id = message.from_user.id if message.from_user else None
+    if not is_admin_user(user_id):
+        return False
+
+    pending = get_admin_pending(context, message.chat_id, user_id)
+    if not pending:
+        return False
+
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
+
+    normalized = normalize_text(message.text or '')
+    if normalized in {'batal', 'cancel'}:
+        clear_admin_pending(context, message.chat_id, user_id)
+        await reply_html(message, admin_home_text(), admin_menu_keyboard(), with_typing_feedback=True)
+        return True
+
+    action = pending.get('action')
+    lines = split_input_lines(message.text or '')
+
+    try:
+        if action == 'product_add':
+            category_key = create_category_from_input(lines)
+            clear_admin_pending(context, message.chat_id, user_id)
+            await reply_html(
+                message,
+                (
+                    '<b>✅ Produk baru berhasil ditambahkan.</b>\n'
+                    f'Nama: <b>{escape(PRODUCTS[category_key]["title"])}</b>\n'
+                    f'Key: <code>{escape(category_key)}</code>'
+                ),
+                admin_menu_keyboard(),
+                with_typing_feedback=True,
+                category_key=category_key,
+            )
+            return True
+
+        if action == 'price_add':
+            category_key = pending.get('category_key')
+            item_id = create_item_from_input(category_key, lines)
+            clear_admin_pending(context, message.chat_id, user_id)
+            await reply_html(
+                message,
+                (
+                    '<b>✅ Harga baru berhasil ditambahkan.</b>\n'
+                    f'Produk: <b>{escape(PRODUCTS[category_key]["title"])}</b>\n'
+                    f'Item ID: <code>{escape(item_id)}</code>\n'
+                    f'Harga: <b>{escape(ITEM_LOOKUP[item_id]["price"])}</b>'
+                ),
+                admin_menu_keyboard(),
+                with_typing_feedback=True,
+                category_key=category_key,
+            )
+            return True
+
+        if action == 'price_edit':
+            item_id = pending.get('item_id')
+            update_item_from_input(item_id, lines)
+            clear_admin_pending(context, message.chat_id, user_id)
+            updated_item = ITEM_LOOKUP[item_id]
+            await reply_html(
+                message,
+                (
+                    '<b>✅ Harga berhasil diperbarui.</b>\n'
+                    f'Paket: <b>{escape(updated_item["name"])}</b>\n'
+                    f'Durasi: <code>{escape(updated_item["duration"])}</code>\n'
+                    f'Harga: <b>{escape(updated_item["price"])}</b>'
+                ),
+                admin_menu_keyboard(),
+                with_typing_feedback=True,
+                category_key=updated_item['category_key'],
+            )
+            return True
+
+        if action == 'config_wa':
+            wa_number = normalize_phone_number(message.text or '')
+            if len(wa_number) < 10:
+                raise ValueError('Nomor WA terlalu pendek atau tidak valid.')
+
+            shared_data.save_config({'WA_NUMBER': wa_number})
+            clear_admin_pending(context, message.chat_id, user_id)
+            await reply_html(
+                message,
+                (
+                    '<b>✅ WA Number berhasil diubah.</b>\n'
+                    f'Nomor baru: <code>{escape(wa_number)}</code>'
+                ),
+                admin_menu_keyboard(),
+                with_typing_feedback=True,
+            )
+            return True
+    except ValueError as exc:
+        back_callback = f'{ADMIN_CALLBACK_PREFIX}home'
+        if action == 'product_add':
+            prompt_text = admin_add_product_prompt()
+            back_callback = f'{ADMIN_CALLBACK_PREFIX}products'
+        elif action == 'price_add':
+            prompt_text = admin_add_price_prompt(pending['category_key'])
+            back_callback = f'{ADMIN_CALLBACK_PREFIX}prices'
+        elif action == 'price_edit':
+            prompt_text = admin_edit_price_prompt(pending['item_id'])
+            back_callback = f'{ADMIN_CALLBACK_PREFIX}prices'
+        else:
+            prompt_text = admin_change_wa_prompt()
+            back_callback = f'{ADMIN_CALLBACK_PREFIX}config'
+
+        await reply_html(
+            message,
+            (
+                '<b>Input belum valid.</b>\n'
+                f'{escape(str(exc))}\n'
+                '\n'
+                f'{prompt_text}'
+            ),
+            admin_prompt_keyboard(back_callback),
+            with_typing_feedback=True,
+        )
+        return True
+
+    return False
 
 
 # =========================================================
@@ -789,6 +1310,330 @@ async def answer_and_replace(
 # =========================================================
 # HANDLERS
 # =========================================================
+
+async def send_admin_home(message, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = message.from_user.id if message.from_user else None
+    clear_admin_pending(context, message.chat_id, user_id)
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
+    await reply_html(message, admin_home_text(), admin_menu_keyboard(), with_typing_feedback=True)
+
+
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if not is_private_chat(update) or not is_admin_user(user_id):
+        await unknown_command(update, context)
+        return
+
+    await send_admin_home(update.message, context)
+
+
+async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    if not is_private_chat(update):
+        await unknown_command(update, context)
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    await reply_html(
+        update.message,
+        (
+            '<b>Telegram ID kamu:</b>\n'
+            f'<code>{user_id}</code>\n'
+            '\n'
+            'Set nilai ini ke <code>ADMIN_TELEGRAM_ID</code> di environment atau <code>data/config.json</code>, lalu restart bot satu kali.'
+        ),
+        with_typing_feedback=True,
+    )
+
+
+async def admin_cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if not is_private_chat(update) or not is_admin_user(user_id):
+        await unknown_command(update, context)
+        return
+
+    clear_admin_pending(context, update.message.chat_id, user_id)
+    await send_admin_home(update.message, context)
+
+
+async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    query = update.callback_query
+    if not query:
+        return False
+
+    data = query.data or ''
+    if not data.startswith(ADMIN_CALLBACK_PREFIX):
+        return False
+
+    if not is_private_chat(update):
+        await query.answer('Aksi tidak dikenali.', show_alert=True)
+        return True
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if not is_admin_user(user_id):
+        await query.answer('Aksi tidak dikenali.', show_alert=True)
+        return True
+
+    message = query.message
+    if not message:
+        await query.answer('Pesan admin tidak ditemukan.', show_alert=True)
+        return True
+
+    touch_chat(context, message.chat_id, user_id)
+    await clear_logo_message(context, message.chat_id, user_id)
+
+    admin_action = data[len(ADMIN_CALLBACK_PREFIX):]
+
+    if admin_action == 'home':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(query, 'Membuka panel admin...', admin_home_text(), admin_menu_keyboard())
+        return True
+
+    if admin_action == 'close':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Panel admin ditutup.',
+            '<b>Panel admin ditutup.</b>\nKetik <code>/admin</code> kapan saja untuk membukanya lagi.',
+            main_menu_keyboard(),
+        )
+        return True
+
+    if admin_action == 'cancel':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(query, 'Input admin dibatalkan.', admin_home_text(), admin_menu_keyboard())
+        return True
+
+    if admin_action == 'products':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(query, 'Membuka kelola produk...', admin_products_text(), admin_products_keyboard())
+        return True
+
+    if admin_action == 'prices':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(query, 'Membuka kelola harga...', admin_prices_text(), admin_prices_keyboard())
+        return True
+
+    if admin_action == 'config':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(query, 'Membuka konfigurasi...', admin_config_text(), admin_config_keyboard())
+        return True
+
+    if admin_action == 'product:add':
+        set_admin_pending(context, message.chat_id, 'product_add', user_id=user_id)
+        await answer_and_replace(
+            query,
+            'Siap menambah produk baru.',
+            admin_add_product_prompt(),
+            admin_prompt_keyboard(f'{ADMIN_CALLBACK_PREFIX}products'),
+        )
+        return True
+
+    if admin_action == 'product:delete':
+        clear_admin_pending(context, message.chat_id, user_id)
+        if not PRODUCTS:
+            await answer_and_replace(query, 'Belum ada produk.', admin_products_text(), admin_products_keyboard())
+            return True
+        await answer_and_replace(
+            query,
+            'Pilih produk yang mau dihapus.',
+            '<b>🗑 Hapus Produk</b>\nPilih produk yang ingin dihapus permanen.',
+            admin_category_picker_keyboard('product:delete:pick'),
+        )
+        return True
+
+    if admin_action.startswith('product:delete:pick:'):
+        category_key = admin_action.split(':', 3)[-1]
+        if category_key not in PRODUCTS:
+            await query.answer('Produk tidak ditemukan.', show_alert=True)
+            return True
+        category = PRODUCTS[category_key]
+        await answer_and_replace(
+            query,
+            'Konfirmasi hapus produk...',
+            (
+                '<b>⚠️ Hapus Produk</b>\n'
+                f'Produk <b>{escape(category["title"])}</b> akan dihapus beserta semua harga di dalamnya.'
+            ),
+            admin_confirm_keyboard(
+                f'{ADMIN_CALLBACK_PREFIX}product:delete:confirm:{category_key}',
+                f'{ADMIN_CALLBACK_PREFIX}product:delete',
+            ),
+            category_key=category_key,
+        )
+        return True
+
+    if admin_action.startswith('product:delete:confirm:'):
+        category_key = admin_action.split(':', 3)[-1]
+        if category_key not in PRODUCTS:
+            await query.answer('Produk tidak ditemukan.', show_alert=True)
+            return True
+        category_title = PRODUCTS[category_key]['title']
+        delete_category_by_key(category_key)
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Produk berhasil dihapus.',
+            f'<b>✅ Produk {escape(category_title)} berhasil dihapus.</b>',
+            admin_products_keyboard(),
+        )
+        return True
+
+    if admin_action == 'price:add':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Pilih produk tujuan.',
+            '<b>➕ Tambah Harga</b>\nPilih produk yang akan ditambahkan paket/harganya.',
+            admin_category_picker_keyboard('price:add:cat'),
+        )
+        return True
+
+    if admin_action.startswith('price:add:cat:'):
+        category_key = admin_action.split(':', 3)[-1]
+        if category_key not in PRODUCTS:
+            await query.answer('Produk tidak ditemukan.', show_alert=True)
+            return True
+        set_admin_pending(context, message.chat_id, 'price_add', user_id=user_id, category_key=category_key)
+        await answer_and_replace(
+            query,
+            'Silakan kirim data harga baru.',
+            admin_add_price_prompt(category_key),
+            admin_prompt_keyboard(f'{ADMIN_CALLBACK_PREFIX}prices'),
+            category_key=category_key,
+        )
+        return True
+
+    if admin_action == 'price:edit':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Pilih produk dulu.',
+            '<b>✏️ Edit Harga</b>\nPilih produk yang paketnya ingin kamu ubah.',
+            admin_category_picker_keyboard('price:edit:cat'),
+        )
+        return True
+
+    if admin_action.startswith('price:edit:cat:'):
+        category_key = admin_action.split(':', 3)[-1]
+        if category_key not in PRODUCTS:
+            await query.answer('Produk tidak ditemukan.', show_alert=True)
+            return True
+        if not PRODUCTS[category_key].get('items'):
+            await query.answer('Produk ini belum punya paket harga.', show_alert=True)
+            return True
+        await answer_and_replace(
+            query,
+            'Pilih paket yang mau diedit.',
+            f'<b>✏️ Edit Harga</b>\nPilih paket dari <b>{escape(PRODUCTS[category_key]["title"])}</b>.',
+            admin_item_picker_keyboard(category_key, 'price:edit:item'),
+            category_key=category_key,
+        )
+        return True
+
+    if admin_action.startswith('price:edit:item:'):
+        item_id = admin_action.split(':', 3)[-1]
+        if item_id not in ITEM_LOOKUP:
+            await query.answer('Item tidak ditemukan.', show_alert=True)
+            return True
+        set_admin_pending(context, message.chat_id, 'price_edit', user_id=user_id, item_id=item_id)
+        await answer_and_replace(
+            query,
+            'Silakan kirim harga baru.',
+            admin_edit_price_prompt(item_id),
+            admin_prompt_keyboard(f'{ADMIN_CALLBACK_PREFIX}prices'),
+            category_key=ITEM_LOOKUP[item_id]['category_key'],
+        )
+        return True
+
+    if admin_action == 'price:delete':
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Pilih produk tujuan.',
+            '<b>🗑 Hapus Harga</b>\nPilih produk yang paketnya ingin kamu hapus.',
+            admin_category_picker_keyboard('price:delete:cat'),
+        )
+        return True
+
+    if admin_action.startswith('price:delete:cat:'):
+        category_key = admin_action.split(':', 3)[-1]
+        if category_key not in PRODUCTS:
+            await query.answer('Produk tidak ditemukan.', show_alert=True)
+            return True
+        if not PRODUCTS[category_key].get('items'):
+            await query.answer('Produk ini belum punya paket harga.', show_alert=True)
+            return True
+        await answer_and_replace(
+            query,
+            'Pilih paket yang mau dihapus.',
+            f'<b>🗑 Hapus Harga</b>\nPilih paket dari <b>{escape(PRODUCTS[category_key]["title"])}</b>.',
+            admin_item_picker_keyboard(category_key, 'price:delete:item'),
+            category_key=category_key,
+        )
+        return True
+
+    if admin_action.startswith('price:delete:item:'):
+        item_id = admin_action.split(':', 3)[-1]
+        if item_id not in ITEM_LOOKUP:
+            await query.answer('Item tidak ditemukan.', show_alert=True)
+            return True
+        item = ITEM_LOOKUP[item_id]
+        await answer_and_replace(
+            query,
+            'Konfirmasi hapus harga...',
+            (
+                '<b>⚠️ Hapus Harga</b>\n'
+                f'Paket <b>{escape(item["name"])}</b> dengan harga <b>{escape(item["price"])}</b> akan dihapus.'
+            ),
+            admin_confirm_keyboard(
+                f'{ADMIN_CALLBACK_PREFIX}price:delete:confirm:{item_id}',
+                f'{ADMIN_CALLBACK_PREFIX}price:delete',
+            ),
+            category_key=item['category_key'],
+        )
+        return True
+
+    if admin_action.startswith('price:delete:confirm:'):
+        item_id = admin_action.split(':', 3)[-1]
+        if item_id not in ITEM_LOOKUP:
+            await query.answer('Item tidak ditemukan.', show_alert=True)
+            return True
+        item = ITEM_LOOKUP[item_id]
+        category_key = item['category_key']
+        item_name = item['name']
+        delete_item_by_id(item_id)
+        clear_admin_pending(context, message.chat_id, user_id)
+        await answer_and_replace(
+            query,
+            'Harga berhasil dihapus.',
+            f'<b>✅ Paket {escape(item_name)} berhasil dihapus.</b>',
+            admin_prices_keyboard(),
+            category_key=category_key,
+        )
+        return True
+
+    if admin_action == 'config:wa':
+        set_admin_pending(context, message.chat_id, 'config_wa', user_id=user_id)
+        await answer_and_replace(
+            query,
+            'Silakan kirim nomor WhatsApp baru.',
+            admin_change_wa_prompt(),
+            admin_prompt_keyboard(f'{ADMIN_CALLBACK_PREFIX}config'),
+        )
+        return True
+
+    await query.answer('Aksi admin tidak dikenali.', show_alert=True)
+    return True
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
@@ -1053,6 +1898,10 @@ def clear_caches():
     netflix_choice_keyboard.cache_clear()
     item_menu_keyboard.cache_clear()
     order_keyboard.cache_clear()
+    admin_menu_keyboard.cache_clear()
+    admin_products_keyboard.cache_clear()
+    admin_prices_keyboard.cache_clear()
+    admin_config_keyboard.cache_clear()
     welcome_text.cache_clear()
     catalog_intro_text.cache_clear()
     help_text.cache_clear()

@@ -43,10 +43,10 @@
             <h3 class="fw-bold mb-1">{{ config.STORE_NAME }}</h3>
             <p class="text-muted mb-3">{{ config.WA_NUMBER }}</p>
             <div class="d-flex justify-content-center gap-2">
-                <a href="/products" class="btn btn-primary px-4">
+                <a href="{{ admin_products_url }}" class="btn btn-primary px-4">
                     <i class="fa-solid fa-box-open me-2"></i>Produk
                 </a>
-                <a href="/config" class="btn btn-outline-light px-4 border-secondary">
+                <a href="{{ admin_config_url }}" class="btn btn-outline-light px-4 border-secondary">
                     <i class="fa-solid fa-gear me-2"></i>Setelan
                 </a>
             </div>
@@ -57,21 +57,21 @@
     <div class="col-12 mt-4">
         <h6 class="fw-bold text-muted text-uppercase mb-3">Aksi Cepat</h6>
         <div class="list-group">
-            <a href="/products" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
+            <a href="{{ admin_products_url }}" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
                 <div>
                     <i class="fa-solid fa-plus-circle text-primary me-2"></i>
                     Tambah Produk Baru
                 </div>
                 <i class="fa-solid fa-chevron-right small text-muted"></i>
             </a>
-            <a href="/config" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
+            <a href="{{ admin_config_url }}" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
                 <div>
                     <i class="fa-solid fa-key text-warning me-2"></i>
                     Ganti Password Admin
                 </div>
                 <i class="fa-solid fa-chevron-right small text-muted"></i>
             </a>
-            <a href="/api/export" target="_blank" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
+            <a href="{{ admin_export_url }}" target="_blank" class="list-group-item list-group-item-action bg-transparent text-white border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center">
                 <div>
                     <i class="fa-solid fa-download text-success me-2"></i>
                     Ekspor Data JSON

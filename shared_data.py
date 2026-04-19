@@ -1,6 +1,7 @@
-import json
-from pathlib import Path
 import logging
+import json
+from copy import deepcopy
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,13 @@ CONFIG = {
     'RESTART_DELAY_SECONDS': 2,
     'IDLE_RESET_SECONDS': 300,
     'ADMIN_USER': 'admin',
-    'ADMIN_PASS': 'admin'
+    'ADMIN_PASS': 'admin',
+    'ADMIN_PASS_HASH': '',
+    'ADMIN_TELEGRAM_ID': None,
 }
 ITEM_LOOKUP = {}
 ITEM_ALIASES = {}
+CATEGORY_ALIASES = {}
 GENERIC_ITEM_ALIASES = {
     'sharing', 'private', 'jaspay', 'indplan', 'famplan',
     'head', 'member pro', 'owner'
@@ -34,6 +38,12 @@ on_data_change_callbacks = []
 def normalize_text(text: str) -> str:
     """Normalize text for matching (lowercase, no extra spaces)"""
     return ' '.join(text.lower().strip().split())
+
+
+def slugify_key(text: str) -> str:
+    cleaned = ''.join(ch.lower() if ch.isalnum() else '_' for ch in text)
+    collapsed = '_'.join(part for part in cleaned.split('_') if part)
+    return collapsed or 'kategori_baru'
 
 def load_all_data():
     global PRODUCTS, CONFIG
@@ -69,11 +79,18 @@ def load_all_data():
     rebuild_lookups()
 
 def rebuild_lookups():
-    global ITEM_LOOKUP, ITEM_ALIASES
+    global ITEM_LOOKUP, ITEM_ALIASES, CATEGORY_ALIASES
     ITEM_LOOKUP.clear()
     ITEM_ALIASES.clear()
+    CATEGORY_ALIASES.clear()
     
     for category_key, category_data in PRODUCTS.items():
+        category_aliases = {
+            normalize_text(category_key.replace('_', ' ')),
+            normalize_text(category_data.get('title', '')),
+        }
+        CATEGORY_ALIASES[category_key] = {alias for alias in category_aliases if alias}
+
         for item in category_data.get('items', []):
             item_data = {
                 'category_key': category_key,
@@ -95,11 +112,16 @@ def rebuild_lookups():
                 aliases.add(plain_name)
             ITEM_ALIASES[item['id']] = aliases
             
-    logger.info('Lookups rebuilt: %d items.', len(ITEM_LOOKUP))
+    logger.info(
+        'Lookups rebuilt: %d categories, %d items.',
+        len(CATEGORY_ALIASES),
+        len(ITEM_LOOKUP),
+    )
 
 def save_products(products_data):
+    snapshot = deepcopy(products_data)
     PRODUCTS.clear()
-    PRODUCTS.update(products_data)
+    PRODUCTS.update(snapshot)
     with open(PRODUCTS_PATH, 'w', encoding='utf-8') as f:
         json.dump(PRODUCTS, f, indent=2, ensure_ascii=False)
     
@@ -114,3 +136,5 @@ def save_config(config_data):
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(CONFIG, f, indent=2, ensure_ascii=False)
 
+    for cb in on_data_change_callbacks:
+        cb()
