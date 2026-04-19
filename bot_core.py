@@ -161,7 +161,7 @@ def is_chat_idle(
     chat_state['last_seen'] = now
     if not last_seen:
         return False
-    return (now - last_seen) >= IDLE_RESET_SECONDS
+    return (now - last_seen) >= IDLE_RESET_SECONDS()
 
 
 def get_logo_data(category_key: str):
@@ -200,9 +200,10 @@ async def ensure_logo_message(
 
 
 def build_admin_url(message: str | None = None) -> str:
+    wa = WA_NUMBER()
     if not message:
-        return f'https://wa.me/{WA_NUMBER}'
-    return f'https://wa.me/{WA_NUMBER}?text={quote(message)}'
+        return f'https://wa.me/{wa}'
+    return f'https://wa.me/{wa}?text={quote(message)}'
 
 
 def build_order_message(item_id: str) -> str:
@@ -282,73 +283,71 @@ def order_keyboard(item_id: str) -> InlineKeyboardMarkup:
 
 @lru_cache(maxsize=1)
 def welcome_text() -> str:
-    catalog_items = [data['title'] for data in PRODUCTS.values()][:12]
+    catalog_items = [(data['icon'], data['title']) for data in PRODUCTS.values()][:12]
     if not catalog_items:
-        catalog_items = ['Belum ada produk']
+        catalog_list = ['  Belum ada produk']
+    else:
+        catalog_list = [f'  {icon} {title}' for icon, title in catalog_items]
 
-    catalog_box = make_text_box(
-        [
-            'Pilih produk yang kamu cari di bawah ini.',
-            '',
-            *[f"• {item}" for item in catalog_items],
-        ],
-        title='KATALOG AKTIF',
-    )
-
-    benefit_box = make_text_box(['• Proses Cepat', '• Aman & Legal', '• Garansi Full'], title='KEUNGGULAN')
-
-    return (
-        f"<b>♛ {escape(STORE_NAME.upper())} ♛</b>\n"
-        '<i>Solusi Premium Apps Murah & Terpercaya.</i>\n\n'
-        f"<code>{escape(catalog_box)}</code>\n\n"
-        f"<code>{escape(benefit_box)}</code>\n\n"
-        '<b>Klik tombol di bawah untuk melihat list lengkap!</b>'
-    )
+    store = STORE_NAME()
+    lines = [
+        f'<b>♛ {escape(store.upper())} ♛</b>',
+        '<i>Solusi Premium Apps Murah &amp; Terpercaya</i>',
+        '',
+        '┌─────────── KATALOG ───────────┐',
+        *[f'│  {escape(item):<29}│' for item in catalog_list],
+        '└───────────────────────────────┘',
+        '',
+        '✦ <b>Proses Cepat</b>  •  <b>Aman &amp; Legal</b>  •  <b>Full Garansi</b>',
+        '',
+        '👇 <i>Tap tombol di bawah untuk mulai:</i>',
+    ]
+    return '\n'.join(lines)
 
 
 @lru_cache(maxsize=1)
 def catalog_intro_text() -> str:
-    flow_box = make_text_box([
-        '1. Pilih kategori app',
-        '2. Pilih paket yang cocok',
-        '3. Tekan tombol order',
-        '4. Lanjut ke WhatsApp admin',
-    ], title='Cara Order')
-
     return (
-        '<b>🛍️ Katalog Produk</b>\n'
-        '<i>Pilih app yang kamu butuhin, lalu lanjut ke detail paketnya.</i>\n\n'
-        f"<code>{escape(flow_box)}</code>\n\n"
-        '<i>Sok dipilih dulu aja ya bre.</i>'
+        '<b>🛍️ Pilih Kategori Produk</b>\n'
+        '<i>Temukan app premium yang kamu butuhin di sini.</i>\n'
+        '\n'
+        '┌──────── Cara Order ─────────┐\n'
+        '│  1. Pilih kategori app      │\n'
+        '│  2. Pilih paket yang cocok  │\n'
+        '│  3. Tekan tombol order      │\n'
+        '│  4. Lanjut ke WhatsApp      │\n'
+        '└─────────────────────────────┘\n'
+        '\n'
+        '<i>👇 Silakan pilih kategori di bawah ini:</i>'
     )
 
 
 @lru_cache(maxsize=1)
 def help_text() -> str:
-    order_box = make_text_box([
-        '1. Buka katalog',
-        '2. Pilih kategori produk',
-        '3. Pilih paket yang diinginkan',
-        '4. Tekan tombol order ke WhatsApp',
-    ], title='Cara Order Cepat')
-
     return (
-        '<b>📌 INFO ORDER</b>\n'
-        '<i>Biar cepat, alurnya tinggal begini.</i>\n\n'
-        f"<code>{escape(order_box)}</code>\n\n"
-        'Kalau udah nemu produk yang ingin dibeli,\n'
-        'nanti langsung diarahkan ke WhatsApp admin ya bre.'
+        '<b>📌 Cara Order</b>\n'
+        '\n'
+        '┌──────────────────────────────────┐\n'
+        '│  1. Buka katalog produk          │\n'
+        '│  2. Pilih kategori               │\n'
+        '│  3. Pilih paket yang diinginkan  │\n'
+        '│  4. Tap tombol Order WhatsApp    │\n'
+        '└──────────────────────────────────┘\n'
+        '\n'
+        '<i>Setelah tap order, kamu akan diarahkan ke WhatsApp admin secara otomatis.</i>'
     )
 
 
 @lru_cache(maxsize=1)
 def netflix_prompt_text() -> str:
     return (
-        '<b>📺 Netflix tersedia dalam dua pilihan</b>\n'
-        '━━━━━━━━━━━━\n\n'
-        'Pilih versi yang mau kamu lihat dulu:\n'
-        '• Harian\n'
-        '• Bulanan'
+        '<b>🎬 Netflix — Pilih Jenis Paket</b>\n'
+        '<i>Tersedia dua pilihan, sesuaikan dengan kebutuhanmu.</i>\n'
+        '\n'
+        '🎟️  <b>Harian</b>  — Fleksibel, bayar per hari\n'
+        '📆  <b>Bulanan</b> — Lebih hemat, aktif 1 bulan\n'
+        '\n'
+        '<i>👇 Pilih di bawah:</i>'
     )
 
 
@@ -445,74 +444,96 @@ def make_text_box(lines: list[str], title: str | None = None) -> str:
 @lru_cache(maxsize=None)
 def format_category_text(category_key: str) -> str:
     data = PRODUCTS[category_key]
-    sections = [
-        f"<b>{escape(data['icon'])} {escape(data['title'].upper())}</b>",
-        f"<i>{escape(data['description'])}</i>",
-        '━━━━━━━━━━━━━━━',
+    icon = data['icon']
+    title = data['title'].upper()
+    desc = data['description']
+    items = data['items']
+
+    lines = [
+        f'<b>{escape(icon)} {escape(title)}</b>',
+        f'<i>{escape(desc)}</i>',
         '',
     ]
 
-    for item in data['items']:
-        box = make_text_box([
-            f"ID: {item['id'].upper()}",
-            f"📦 {item['name']}",
-            f"⏳ {item['duration']}",
-            f"💰 {item['price']}",
-        ])
-        sections.append(f"<code>{escape(box)}</code>")
-        sections.append('')
+    for item in items:
+        price_tag = escape(item['price'])
+        name_tag  = escape(item['name'])
+        dur_tag   = escape(item['duration'])
+        id_tag    = item['id'].upper()
+        lines += [
+            f'<code>┌───────────────────────┐</code>',
+            f'<code>│ {name_tag:<22}│</code>',
+            f'<code>│ ⏱ {dur_tag:<20}│</code>',
+            f'<code>│ 💰 {price_tag:<19}│</code>',
+            f'<code>│ 🔑 {id_tag:<19}│</code>',
+            f'<code>└───────────────────────┘</code>',
+            '',
+        ]
 
-    sections.append('<i>Tap paket di tombol bawah untuk lanjut order.</i>')
-    return '\n'.join(sections).strip()
+    lines.append('<i>👇 Tap paket di tombol bawah untuk order.</i>')
+    return '\n'.join(lines).strip()
 
 
 @lru_cache(maxsize=None)
 def format_item_text(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
-    category_data = PRODUCTS[item['category_key']]
-    category_notes = category_data['category_notes']
+    category_data  = PRODUCTS[item['category_key']]
+    category_notes = category_data.get('category_notes', [])
     category_note_title = category_data.get('category_note_title', 'Catatan')
 
-    summary_box = make_text_box([
-        item['name'],
+    name  = escape(item['name'])
+    cat   = escape(item['category_title'])
+    dur   = escape(item['duration'])
+    price = escape(item['price'])
+    code  = item['id'].upper()
+
+    lines = [
+        f'<b>🧾 Detail Paket</b>',
         '',
-        f"Kategori : {item['category_title']}",
-        f"Durasi   : {item['duration']}",
-        f"Harga    : {item['price']}",
-        f"Kode     : {item['id'].upper()}",
-    ], title='Detail Paket')
+        f'<code>┌──────────────────────────────┐</code>',
+        f'<code>│ {name:<29}│</code>',
+        f'<code>├──────────────────────────────┤</code>',
+        f'<code>│ 📂 Kategori : {cat:<15}│</code>',
+        f'<code>│ ⏱  Durasi   : {dur:<15}│</code>',
+        f'<code>│ 💰 Harga    : {price:<15}│</code>',
+        f'<code>│ 🔑 Kode     : {code:<15}│</code>',
+        f'<code>└──────────────────────────────┘</code>',
+        '',
+    ]
 
-    lines = [f"<code>{escape(summary_box)}</code>", '']
-
-    if item['notes']:
-        benefit_box = make_text_box([f"• {note}" for note in item['notes']], title='Highlight')
-        lines.append(f"<code>{escape(benefit_box)}</code>")
+    if item.get('notes'):
+        lines.append('<b>✨ Highlight:</b>')
+        for note in item['notes']:
+            lines.append(f'  • {escape(note)}')
         lines.append('')
 
     if category_notes:
-        note_box = make_text_box([f"• {note}" for note in category_notes], title=category_note_title)
-        lines.append(f"<code>{escape(note_box)}</code>")
+        lines.append(f'<b>📋 {escape(category_note_title)}:</b>')
+        for note in category_notes:
+            lines.append(f'  • {escape(note)}')
         lines.append('')
 
-    lines.append('<i>Tekan tombol order untuk mengirim format chat WhatsApp ke admin.</i>')
+    lines.append('<i>✅ Tap tombol order untuk kirim format ke WhatsApp admin.</i>')
     return '\n'.join(lines).strip()
 
 
 def fallback_text() -> str:
+    store = STORE_NAME()
     return (
-        f"<b>✦ {escape(STORE_NAME.upper())} ✦</b>\n\n"
-        'Silakan mulai dari menu utama ya bre.\n'
+        f'<b>♛ {escape(store.upper())} ♛</b>\n\n'
+        'Silakan mulai dari menu utama ya.\n'
         'Pilih kategori produk yang ingin kamu lihat di bawah ini.'
     )
 
 
 @lru_cache(maxsize=1)
 def idle_reset_text() -> str:
-    minutes = max(IDLE_RESET_SECONDS // 60, 1)
+    minutes = max(IDLE_RESET_SECONDS() // 60, 1)
     return (
-        '<b>🔄 Sesi di-reset otomatis</b>\n'
-        '━━━━━━━━━━━━\n\n'
-        f'Chat sempat tidak aktif sekitar {minutes} menit, jadi bot balik ke menu utama dulu ya bre.'
+        '<b>⏰ Sesi Kamu Habis</b>\n'
+        f'<i>Bot kembali ke menu utama karena tidak ada aktivitas selama {minutes} menit.</i>\n'
+        '\n'
+        '👇 Silakan mulai lagi dari bawah ya.'
     )
 
 
