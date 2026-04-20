@@ -2,12 +2,10 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from telegram import Update
 from dotenv import load_dotenv
 
@@ -17,7 +15,7 @@ load_dotenv()
 import shared_data
 shared_data.load_all_data()
 
-from bot_core import build_order_launch_context, get_application
+from bot_core import get_application
 from admin_routes import router as admin_router
 
 # Logging
@@ -38,7 +36,6 @@ WEBHOOK_PATH = '/telegram/webhook'
 WEBHOOK_URL = f'https://{DOMAIN}{WEBHOOK_PATH}' if DOMAIN else None
 
 bot_app = None
-templates = Jinja2Templates(directory=str(Path(__file__).parent / 'templates'))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -82,15 +79,6 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error saat shutdown: {e}")
 
 app = FastAPI(title='Reiizam Store', lifespan=lifespan)
-
-
-@app.get("/order/{item_id}", response_class=HTMLResponse)
-async def whatsapp_order_redirect(request: Request, item_id: str):
-    try:
-        context = build_order_launch_context(item_id)
-    except KeyError:
-        return HTMLResponse('<h1>Produk tidak ditemukan.</h1>', status_code=404)
-    return templates.TemplateResponse('order_redirect.html', {'request': request, **context})
 
 @app.get("/health")
 async def health_check():

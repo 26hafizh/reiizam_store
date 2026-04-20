@@ -38,22 +38,6 @@ def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '62882000414738')
 def IDLE_RESET_SECONDS(): return int(shared_data.CONFIG.get('IDLE_RESET_SECONDS', 900))
 
 
-def PUBLIC_BASE_URL() -> str:
-    raw = (
-        os.getenv('PUBLIC_BASE_URL')
-        or os.getenv('RAILWAY_PUBLIC_DOMAIN')
-        or os.getenv('RAILWAY_STATIC_URL')
-        or ''
-    ).strip()
-    if not raw:
-        return ''
-    if raw.startswith('http://'):
-        return ''
-    if raw.startswith('https://'):
-        return raw.rstrip('/')
-    return f"https://{raw.lstrip('/')}".rstrip('/')
-
-
 def ADMIN_TELEGRAM_ID() -> int | None:
     value = os.getenv('ADMIN_TELEGRAM_ID')
     if value in (None, ''):
@@ -285,20 +269,6 @@ def build_whatsapp_url(message: str | None = None) -> str:
     )
 
 
-def build_whatsapp_app_url(message: str | None = None) -> str:
-    wa = WA_NUMBER()
-    if not message:
-        return f'whatsapp://send?phone={wa}'
-    return f'whatsapp://send?phone={wa}&text={quote(message)}'
-
-
-def build_order_launch_url(item_id: str) -> str | None:
-    base_url = PUBLIC_BASE_URL()
-    if not base_url:
-        return None
-    return f'{base_url}/order/{quote(item_id)}'
-
-
 def build_order_message(item_id: str) -> str:
     item = ITEM_LOOKUP[item_id]
     store = STORE_NAME()
@@ -314,21 +284,6 @@ def build_order_message(item_id: str) -> str:
         "━━━━━━━━━━━━━━━━━━\n"
         "Apakah stok ready min? Mohon infonya ya, terima kasih! 🙏"
     )
-
-
-def build_order_launch_context(item_id: str) -> dict[str, str]:
-    item = ITEM_LOOKUP[item_id]
-    order_text = build_order_message(item_id)
-    return {
-        'store_name': STORE_NAME(),
-        'item_name': item['name'],
-        'category_title': item['category_title'],
-        'order_text': order_text,
-        'wa_app_url': build_whatsapp_app_url(order_text),
-        'wa_url': build_whatsapp_url(order_text),
-    }
-
-
 def chunk_buttons(buttons: list[InlineKeyboardButton], size: int) -> list[list[InlineKeyboardButton]]:
     return [buttons[index:index + size] for index in range(0, len(buttons), size)]
 
