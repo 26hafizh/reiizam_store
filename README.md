@@ -26,7 +26,7 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
 3. Buat file `.env` atau set environment variables:
    ```env
    BOT_TOKEN=ISI_TOKEN_BOT_KAMU
-   WA_NUMBER=62882000414738
+   WA_NUMBER=6285126019233
    STORE_NAME=reiizam store
    RESTART_DELAY_SECONDS=5
    ```

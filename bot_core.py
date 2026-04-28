@@ -34,7 +34,7 @@ from shared_data import (
 )
 
 def STORE_NAME(): return shared_data.CONFIG.get('STORE_NAME', 'Store')
-def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '62882000414738')
+def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '6285126019233')
 def IDLE_RESET_SECONDS(): return int(shared_data.CONFIG.get('IDLE_RESET_SECONDS', 900))
 
 
