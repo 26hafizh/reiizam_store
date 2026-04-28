@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -26,6 +27,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def log_update_task_result(task: asyncio.Task) -> None:
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        logger.exception("Unhandled error while processing webhook update")
+
 # Railway Domain Detection
 # RAILWAY_PUBLIC_DOMAIN biasanya hanya 'xxx.up.railway.app'
 # RAILWAY_STATIC_URL biasanya 'xxx.up.railway.app'
@@ -52,7 +62,8 @@ async def lifespan(app: FastAPI):
             success = await bot_app.bot.set_webhook(
                 url=WEBHOOK_URL, 
                 drop_pending_updates=True,
-                allowed_updates=Update.ALL_TYPES
+                allowed_updates=Update.ALL_TYPES,
+                max_connections=40,
             )
             if success:
                 logger.info(f"✅ WEBHOOK BERHASIL DISET: {WEBHOOK_URL}")
@@ -105,8 +116,10 @@ async def telegram_webhook(request: Request):
         
         update = Update.de_json(data, bot_app.bot)
         
-        # Proses update secara langsung
-        await bot_app.process_update(update)
+        # Ack webhook quickly so Telegram can deliver the next update without
+        # waiting for slower message edits, photo uploads, or external API calls.
+        task = asyncio.create_task(bot_app.process_update(update))
+        task.add_done_callback(log_update_task_result)
         
         return JSONResponse({"ok": True})
     except Exception as e:

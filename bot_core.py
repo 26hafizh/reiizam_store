@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import logging
 import os
@@ -11,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ChatAction, ParseMode
+from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
     TypeHandler,
@@ -77,8 +76,8 @@ CATEGORY_LOGOS = {
     'wink': LOGO_DIR / 'wink.jpg',
 }
 
-UI_FEEDBACK_DELAY = 0.28
 DOUBLE_CLICK_GUARD_SECONDS = 1.2
+LOGO_FILE_ID_CACHE: dict[str, str] = {}
 
 BOT_COMMANDS = [
     ('start', 'Buka menu utama'),
@@ -200,35 +199,63 @@ def clear_admin_pending(
     get_chat_state(context, chat_id, user_id).pop(ADMIN_PENDING_KEY, None)
 
 
-def get_logo_data(category_key: str):
+@lru_cache(maxsize=None)
+def get_logo_source(category_key: str):
     category_data = PRODUCTS.get(category_key, {})
     raw_logo = str(category_data.get('logo', '') or '').strip()
 
     if raw_logo.startswith('data:image/') and ',' in raw_logo:
         _, encoded = raw_logo.split(',', 1)
         try:
-            binary = base64.b64decode(encoded)
-            buffer = BytesIO(binary)
-            buffer.name = f'{category_key}.jpg'
-            buffer.seek(0)
-            return buffer
+            return ('bytes', base64.b64decode(encoded))
         except Exception:
             logger.warning('Logo base64 kategori %s tidak valid.', category_key, exc_info=True)
 
     if raw_logo.startswith(('http://', 'https://')):
-        return raw_logo
+        return ('url', raw_logo)
 
     if raw_logo:
         logo_path = Path(raw_logo)
         if not logo_path.is_absolute():
             logo_path = BASE_DIR / raw_logo
         if logo_path.exists():
-            return logo_path
+            return ('path', str(logo_path))
 
     fallback_logo = CATEGORY_LOGOS.get(category_key)
     if isinstance(fallback_logo, Path):
-        return fallback_logo if fallback_logo.exists() else None
-    return fallback_logo
+        return ('path', str(fallback_logo)) if fallback_logo.exists() else None
+    if isinstance(fallback_logo, str) and fallback_logo:
+        return ('url', fallback_logo)
+    return None
+
+
+def has_category_logo(category_key: str | None) -> bool:
+    return bool(category_key and get_logo_source(category_key))
+
+
+def get_logo_data(category_key: str):
+    source = get_logo_source(category_key)
+    if not source:
+        return None
+
+    source_type, payload = source
+    if source_type == 'bytes':
+        buffer = BytesIO(payload)
+        buffer.name = f'{category_key}.jpg'
+        buffer.seek(0)
+        return buffer
+    if source_type == 'path':
+        return Path(payload)
+    return payload
+
+
+def remember_logo_file_id(category_key: str | None, sent_message: object) -> None:
+    if not category_key:
+        return
+
+    photos = getattr(sent_message, 'photo', None) or []
+    if photos:
+        LOGO_FILE_ID_CACHE[category_key] = photos[-1].file_id
 
 
 async def clear_logo_message(
@@ -248,7 +275,7 @@ async def ensure_logo_message(
     user_id: int | None = None,
 ) -> None:
     chat_state = get_chat_state(context, chat_id, user_id)
-    if get_logo_data(category_key):
+    if has_category_logo(category_key):
         chat_state['logo_category_key'] = category_key
         return
     chat_state.pop('logo_category_key', None)
@@ -1057,11 +1084,6 @@ async def reply_html(
     with_typing_feedback: bool = False,
     category_key: str | None = None,
 ) -> None:
-    if with_typing_feedback:
-        with suppress(Exception):
-            await message.get_bot().send_chat_action(chat_id=message.chat_id, action=ChatAction.TYPING)
-        await asyncio.sleep(UI_FEEDBACK_DELAY)
-
     await send_view_message(
         bot=message.get_bot(),
         chat_id=message.chat_id,
@@ -1117,36 +1139,48 @@ async def send_view_message(
     reply_markup: InlineKeyboardMarkup | None = None,
     category_key: str | None = None,
 ) -> object:
-    logo_data = get_logo_data(category_key) if category_key else None
-    can_send_with_logo = bool(logo_data and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+    can_send_with_logo = bool(has_category_logo(category_key) and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
 
     if can_send_with_logo:
-        try:
-            # Handle both Path and BytesIO
-            photo = logo_data
-            if isinstance(logo_data, BytesIO):
-                logo_data.seek(0)
-            
-            sent_message = await bot.send_photo(
-                chat_id=chat_id,
-                photo=photo,
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML,
-                disable_notification=True,
-            )
-            logger.info('Logo kategori %s berhasil dikirim ke chat %s.', category_key, chat_id)
-            return sent_message
-        except Exception as e:
-            logger.error('Gagal mengirim photo: %s', e)
-            # Fallback to normal text message
-            pass
-        except Exception:
-            logger.warning(
-                'Gagal mengirim tampilan dengan logo untuk kategori %s. Fallback ke teks.',
-                category_key,
-                exc_info=True,
-            )
+        cached_file_id = LOGO_FILE_ID_CACHE.get(category_key or '')
+        if cached_file_id:
+            try:
+                sent_message = await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=cached_file_id,
+                    caption=text,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
+                    disable_notification=True,
+                )
+                remember_logo_file_id(category_key, sent_message)
+                logger.debug('Logo kategori %s berhasil dikirim dari cache ke chat %s.', category_key, chat_id)
+                return sent_message
+            except Exception:
+                LOGO_FILE_ID_CACHE.pop(category_key or '', None)
+
+        logo_data = get_logo_data(category_key) if category_key else None
+        if logo_data:
+            try:
+                if isinstance(logo_data, BytesIO):
+                    logo_data.seek(0)
+                sent_message = await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=logo_data,
+                    caption=text,
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
+                    disable_notification=True,
+                )
+                remember_logo_file_id(category_key, sent_message)
+                logger.debug('Logo kategori %s berhasil dikirim ke chat %s.', category_key, chat_id)
+                return sent_message
+            except Exception:
+                logger.warning(
+                    'Gagal mengirim tampilan dengan logo untuk kategori %s. Fallback ke teks.',
+                    category_key,
+                    exc_info=True,
+                )
 
     return await bot.send_message(
         chat_id=chat_id,
@@ -1168,8 +1202,7 @@ async def try_edit_query_message(
     if not message:
         return False
 
-    logo_data = get_logo_data(category_key) if category_key else None
-    target_is_photo = bool(logo_data and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
+    target_is_photo = bool(has_category_logo(category_key) and len(text) <= MAX_TELEGRAM_CAPTION_LENGTH)
     current_is_photo = bool(getattr(message, 'photo', None))
 
     try:
@@ -1838,6 +1871,8 @@ def run_bot() -> None:
 
 
 def clear_caches():
+    LOGO_FILE_ID_CACHE.clear()
+    get_logo_source.cache_clear()
     main_menu_keyboard.cache_clear()
     category_menu_keyboard.cache_clear()
     netflix_choice_keyboard.cache_clear()
