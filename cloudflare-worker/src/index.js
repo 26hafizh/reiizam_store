@@ -305,8 +305,8 @@ function waNumber(env) {
 
 function mainMenuKeyboard() {
   return inlineKeyboard([
-    [button("List Product", "lihat_kategori")],
-    [button("Cara Order Cepat", "bantuan")],
+    [button("🛍️ List Product", "lihat_kategori")],
+    [button("📌 Cara Order Cepat", "bantuan")],
   ]);
 }
 
@@ -315,14 +315,14 @@ function categoryMenuKeyboard() {
     button(`${data.icon || ""} ${data.title || key}`, `cat_${key}`)
   );
   const rows = chunk(buttons, 2);
-  rows.push([button("Menu Utama", "menu")]);
+  rows.push([button("🏠 Menu Utama", "menu")]);
   return inlineKeyboard(rows);
 }
 
 function netflixChoiceKeyboard() {
   return inlineKeyboard([
-    [button("Netflix Harian", "cat_netflix_harian"), button("Netflix Bulanan", "cat_netflix_bulanan")],
-    [button("Menu Utama", "menu")],
+    [button("📺 Netflix Harian", "cat_netflix_harian"), button("🎬 Netflix Bulanan", "cat_netflix_bulanan")],
+    [button("🏠 Menu Utama", "menu")],
   ]);
 }
 
@@ -335,17 +335,17 @@ function itemMenuKeyboard(categoryKey) {
     }
     rows.push([button(label, `item_${item.id}`)]);
   }
-  rows.push([button("Kembali ke Kategori", "lihat_kategori")]);
-  rows.push([button("Menu Utama", "menu")]);
+  rows.push([button("⬅️ Kembali ke Kategori", "lihat_kategori")]);
+  rows.push([button("🏠 Menu Utama", "menu")]);
   return inlineKeyboard(rows);
 }
 
 function orderKeyboard(itemId, env) {
   const item = itemLookup[itemId];
   return inlineKeyboard([
-    [urlButton("Order via WhatsApp", buildWhatsAppUrl(buildOrderMessage(itemId, env), env))],
-    [button("Kembali", `cat_${item.category_key}`)],
-    [button("Menu Utama", "menu")],
+    [urlButton("✅ Order via WhatsApp", buildWhatsAppUrl(buildOrderMessage(itemId, env), env))],
+    [button("⬅️ Kembali", `cat_${item.category_key}`)],
+    [button("🏠 Menu Utama", "menu")],
   ]);
 }
 
@@ -378,73 +378,77 @@ function buildOrderMessage(itemId, env) {
   const item = itemLookup[itemId];
   const store = storeName(env);
   return [
-    `FORM ORDER - ${store.toUpperCase()}`,
-    "------------------",
+    `🚀 *FORM ORDER - ${store.toUpperCase()}*`,
+    "━━━━━━━━━━━━━━━━━━",
     "",
     "Halo Admin, saya ingin memesan paket berikut:",
     "",
-    `Kategori: ${item.category_title}`,
-    `Produk: ${item.name}`,
-    `Durasi: ${item.duration}`,
-    `Harga: ${item.price}`,
-    `Kode: ${item.id.toUpperCase()}`,
+    `📂 *Kategori:* ${item.category_title}`,
+    `📦 *Produk:* ${item.name}`,
+    `⏳ *Durasi:* ${item.duration}`,
+    `💰 *Harga:* ${item.price}`,
+    `🔑 *Kode:* ${item.id.toUpperCase()}`,
     "",
-    "Apakah stok ready min? Mohon infonya ya, terima kasih!",
+    "━━━━━━━━━━━━━━━━━━",
+    "Apakah stok ready min? Mohon infonya ya, terima kasih! 🙏",
   ].join("\n");
 }
 
 function welcomeText(env) {
   const catalogItems = Object.values(products).slice(0, 12);
   const lines = [
-    `<b>WELCOME TO ${escapeHtml(storeName(env).toUpperCase())}</b>`,
-    "<i>Penyedia layanan premium terlengkap dan terjangkau.</i>",
+    `<b>✨ WELCOME TO ${escapeHtml(storeName(env).toUpperCase())} ✨</b>`,
+    "<i>Penyedia Layanan Premium Terlengkap &amp; Terjangkau.</i>",
     "",
-    "<b>KATALOG PRODUK KAMI</b>",
+    "<b>💎 KATALOG PRODUK KAMI</b>",
   ];
 
   if (!catalogItems.length) {
-    lines.push("<i>Belum ada produk tersedia</i>");
+    lines.push("<i>  • Belum ada produk tersedia</i>");
   } else {
     for (const item of catalogItems) {
-      lines.push(`${escapeHtml(item.icon || "")} ${escapeHtml(item.title || "")}`);
+      lines.push(`  ${escapeHtml(item.icon || "")} ${escapeHtml(item.title || "")}`);
     }
   }
 
   lines.push(
     "",
-    "<b>KEUNGGULAN KAMI:</b>",
-    "- Proses cepat",
-    "- Legal dan bergaransi",
-    "- Harga hemat",
+    "<b>🚀 KEUNGGULAN KAMI:</b>",
+    "⚡ <i>Proses Kilat</i>",
+    "🛡️ <i>Legal &amp; Bergaransi</i>",
+    "💰 <i>Harga Termurah</i>",
     "",
-    "<b>Silakan pilih menu di bawah untuk mulai order.</b>"
+    "<b>Silakan pilih menu di bawah untuk mulai order!</b>"
   );
   return lines.join("\n");
 }
 
 function catalogIntroText() {
   return [
-    "<b>Pilih Kategori Produk</b>",
-    "<i>Temukan app premium yang kamu butuhkan di sini.</i>",
+    "<b>🛍️ Pilih Kategori Produk</b>",
+    "<i>Temukan app premium yang kamu butuhin di sini.</i>",
     "",
-    "<b>Cara Order:</b>",
-    "1. Pilih kategori app",
-    "2. Pilih paket yang cocok",
-    "3. Tekan tombol order",
-    "4. Lanjut ke WhatsApp",
+    "┌──────── Cara Order ─────────┐",
+    "│  1. Pilih kategori app      │",
+    "│  2. Pilih paket yang cocok  │",
+    "│  3. Tekan tombol order      │",
+    "│  4. Lanjut ke WhatsApp      │",
+    "└─────────────────────────────┘",
     "",
-    "<i>Silakan pilih kategori di bawah ini.</i>",
+    "<i>👇 Silakan pilih kategori di bawah ini:</i>",
   ].join("\n");
 }
 
 function helpText() {
   return [
-    "<b>Cara Order</b>",
+    "<b>📌 Cara Order</b>",
     "",
-    "1. Buka katalog produk",
-    "2. Pilih kategori",
-    "3. Pilih paket yang diinginkan",
-    "4. Tap tombol Order WhatsApp",
+    "┌──────────────────────────────────┐",
+    "│  1. Buka katalog produk          │",
+    "│  2. Pilih kategori               │",
+    "│  3. Pilih paket yang diinginkan  │",
+    "│  4. Tap tombol Order WhatsApp    │",
+    "└──────────────────────────────────┘",
     "",
     "<i>Setelah tap order, kamu akan diarahkan ke WhatsApp admin secara otomatis.</i>",
   ].join("\n");
@@ -452,13 +456,13 @@ function helpText() {
 
 function netflixPromptText() {
   return [
-    "<b>Netflix - Pilih Jenis Paket</b>",
+    "<b>🎬 Netflix — Pilih Jenis Paket</b>",
     "<i>Tersedia dua pilihan, sesuaikan dengan kebutuhanmu.</i>",
     "",
-    "<b>Harian</b> - Fleksibel, bayar per hari",
-    "<b>Bulanan</b> - Lebih hemat, aktif 1 bulan",
+    "🎟️  <b>Harian</b>  — Fleksibel, bayar per hari",
+    "📆  <b>Bulanan</b> — Lebih hemat, aktif 1 bulan",
     "",
-    "<i>Pilih di bawah.</i>",
+    "<i>👇 Pilih di bawah:</i>",
   ].join("\n");
 }
 
@@ -467,20 +471,20 @@ function formatCategoryText(categoryKey) {
   const lines = [
     `<b>${escapeHtml(category.icon || "")} ${escapeHtml((category.title || "").toUpperCase())} KATEGORI</b>`,
     `<i>"${escapeHtml(category.description || "")}"</i>`,
-    "--------------------",
+    "━━━━━━━━━━━━━━━━━━━━",
     "",
   ];
 
   for (const item of category.items || []) {
     lines.push(
-      `<b>${escapeHtml(item.name || "")}</b>`,
-      `Durasi: <code>${escapeHtml(item.duration || "")}</code>`,
-      `Harga: <b>${escapeHtml(item.price || "")}</b>`,
+      `📦 <b>${escapeHtml(item.name || "")}</b>`,
+      `├ ⏳ Durasi: <code>${escapeHtml(item.duration || "")}</code>`,
+      `└ 💰 Harga: <b>${escapeHtml(item.price || "")}</b>`,
       ""
     );
   }
 
-  lines.push("<i>Pilih paket di bawah untuk detail dan order.</i>");
+  lines.push("<i>👇 Pilih paket di bawah untuk detail &amp; order:</i>");
   return lines.join("\n").trim();
 }
 
@@ -488,41 +492,41 @@ function formatItemText(itemId) {
   const item = itemLookup[itemId];
   const category = products[item.category_key] || {};
   const lines = [
-    "<b>DETAIL PESANAN</b>",
-    "--------------------",
-    `<b>Kategori:</b> ${escapeHtml(item.category_title || "")}`,
-    `<b>Produk:</b> ${escapeHtml(item.name || "")}`,
-    `<b>Durasi:</b> ${escapeHtml(item.duration || "")}`,
-    `<b>Harga:</b> ${escapeHtml(item.price || "")}`,
-    `<b>Kode:</b> <code>${escapeHtml(String(item.id || "").toUpperCase())}</code>`,
-    "--------------------",
+    "<b>📋 DETAIL PESANAN</b>",
+    "━━━━━━━━━━━━━━━━━━━━",
+    `📂 <b>Kategori:</b> ${escapeHtml(item.category_title || "")}`,
+    `📦 <b>Produk:</b> ${escapeHtml(item.name || "")}`,
+    `⏳ <b>Durasi:</b> ${escapeHtml(item.duration || "")}`,
+    `💰 <b>Harga:</b> <b>${escapeHtml(item.price || "")}</b>`,
+    `🔑 <b>Kode:</b> <code>${escapeHtml(String(item.id || "").toUpperCase())}</code>`,
+    "━━━━━━━━━━━━━━━━━━━━",
     "",
   ];
 
   if (item.notes?.length) {
-    lines.push("<b>Highlight:</b>");
+    lines.push("<b>✨ HIGHLIGHT:</b>");
     for (const note of item.notes) {
-      lines.push(`- <i>${escapeHtml(note)}</i>`);
+      lines.push(`• <i>${escapeHtml(note)}</i>`);
     }
     lines.push("");
   }
 
   if (category.category_notes?.length) {
     const title = category.category_note_title || "Informasi";
-    lines.push(`<b>${escapeHtml(title.toUpperCase())}:</b>`);
+    lines.push(`<b>⚠️ ${escapeHtml(title.toUpperCase())}:</b>`);
     for (const note of category.category_notes) {
-      lines.push(`- <i>${escapeHtml(note)}</i>`);
+      lines.push(`• <i>${escapeHtml(note)}</i>`);
     }
     lines.push("");
   }
 
-  lines.push("<i>Tap tombol di bawah untuk kirim format order ke WhatsApp.</i>");
+  lines.push("<i>✅ Tap tombol di bawah untuk kirim format order ke WhatsApp.</i>");
   return lines.join("\n").trim();
 }
 
 function fallbackText(env) {
   return [
-    `<b>${escapeHtml(storeName(env).toUpperCase())}</b>`,
+    `<b>♛ ${escapeHtml(storeName(env).toUpperCase())} ♛</b>`,
     "",
     "Silakan mulai dari menu utama ya.",
     "Pilih kategori produk yang ingin kamu lihat di bawah ini.",
