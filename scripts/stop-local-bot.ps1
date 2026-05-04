@@ -3,8 +3,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Processes = Get-CimInstance Win32_Process | Where-Object {
     $_.Name -match "^python(\.exe)?$" -and
-    $_.CommandLine -match "bot\.py" -and
-    $_.CommandLine -match [regex]::Escape($RepoRoot)
+    $_.CommandLine -match "(^|\s)bot\.py(\s|$)"
 }
 
 if (-not $Processes) {
