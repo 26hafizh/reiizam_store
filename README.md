@@ -3,12 +3,12 @@
 Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin dengan pesan order otomatis yang lebih rapi, cepat, dan nyaman dipakai.
 
 ## Isi paket
-- `bot.py` - source code bot
+- `main.py` - aplikasi FastAPI untuk bot + dashboard admin
+- `bot.py` - mode polling bot saja untuk jalankan lokal sederhana
+- `bot_core.py` - handler dan tampilan bot Telegram
 - `requirements.txt` - dependency Python
 - `.env.example` - contoh environment variable
-- `Dockerfile` - alternatif deploy berbasis container
-- `railway.json` - konfigurasi start command Railway
-- `DEPLOYMENT.md` - catatan deploy dan storage
+- `railway.toml` - konfigurasi start command Railway
 
 ## Fitur utama
 - Tampilan chat Telegram lebih rapi dan terasa lebih premium
@@ -29,8 +29,16 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
    WA_NUMBER=6285126019233
    STORE_NAME=reiizam store
    RESTART_DELAY_SECONDS=5
+   ADMIN_BASE_PATH=/reiizam-control-room
+   ADMIN_SESSION_SECRET=ganti_dengan_random_panjang
    ```
 4. Jalankan:
+   ```bash
+   python main.py
+   ```
+   Dashboard admin tersedia di `http://localhost:8080/reiizam-control-room`.
+
+   Jika hanya butuh bot Telegram tanpa dashboard:
    ```bash
    python bot.py
    ```
@@ -43,11 +51,19 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
    - `WA_NUMBER`
    - `STORE_NAME`
    - `RESTART_DELAY_SECONDS=5` (opsional)
-4. Railway bisa memakai start command `python bot.py`. File `railway.json` juga sudah menyiapkannya.
+4. Railway memakai start command dari `railway.toml`:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
 5. Setelah deploy berhasil, bot akan berjalan terus selama servicenya aktif.
+
+## Admin Telegram
+- Ketik `/myid` ke bot untuk melihat Telegram ID kamu.
+- Set `ADMIN_TELEGRAM_ID` di environment atau `data/config.json`, lalu restart bot.
+- Setelah itu ketik `/admin` untuk mengelola produk, harga, dan nomor WhatsApp dari Telegram.
 
 ## Catatan
 - Nomor WhatsApp harus pakai format internasional tanpa `+`.
 - Token bot Telegram didapat dari `@BotFather`.
-- Bot ini memakai polling, jadi tidak perlu webhook tambahan.
+- Lokal tanpa domain memakai polling. Railway memakai webhook otomatis dari domain Railway.
 - Font asli Telegram tidak bisa diganti dari kode bot, jadi perbaikan tampilan difokuskan ke layout, struktur pesan, tombol, dan template order.

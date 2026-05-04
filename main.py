@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -11,12 +12,12 @@ from telegram import Update
 from dotenv import load_dotenv
 
 # Load ENV
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / '.env')
 
 import shared_data
 shared_data.load_all_data()
 
-from bot_core import get_application
+from bot_core import get_application, post_init
 from admin_routes import router as admin_router
 
 # Logging
@@ -46,16 +47,20 @@ WEBHOOK_PATH = '/telegram/webhook'
 WEBHOOK_URL = f'https://{DOMAIN}{WEBHOOK_PATH}' if DOMAIN else None
 
 bot_app = None
+bot_started = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global bot_app
+    global bot_app, bot_started
     logger.info("=== STARTING APPLICATION LIFESPAN ===")
+    candidate_app = None
     
     try:
-        bot_app = get_application()
-        await bot_app.initialize()
-        await bot_app.start()
+        candidate_app = get_application()
+        await candidate_app.initialize()
+        await post_init(candidate_app)
+        await candidate_app.start()
+        bot_app = candidate_app
 
         if WEBHOOK_URL:
             # Set Webhook
@@ -68,14 +73,28 @@ async def lifespan(app: FastAPI):
             if success:
                 logger.info(f"✅ WEBHOOK BERHASIL DISET: {WEBHOOK_URL}")
             else:
-                logger.error(f"❌ GAGAL SET WEBHOOK: {WEBHOOK_URL}")
+                raise RuntimeError(f"Gagal set webhook: {WEBHOOK_URL}")
         else:
             # Fallback Polling (Lokal)
             await bot_app.updater.start_polling(drop_pending_updates=True)
             logger.info("ℹ️ POLLING MODE AKTIF (Lokal/No Domain)")
 
+        bot_started = True
+
     except Exception as e:
         logger.exception(f"💥 FATAL ERROR SAAT STARTUP: {e}")
+        bot_started = False
+        bot_app = None
+        if candidate_app:
+            try:
+                await candidate_app.stop()
+            except Exception:
+                pass
+            try:
+                await candidate_app.shutdown()
+            except Exception:
+                pass
+        raise
 
     yield
 
@@ -86,6 +105,7 @@ async def lifespan(app: FastAPI):
                 await bot_app.updater.stop()
             await bot_app.stop()
             await bot_app.shutdown()
+            bot_started = False
     except Exception as e:
         logger.error(f"Error saat shutdown: {e}")
 
@@ -97,6 +117,7 @@ async def health_check():
     status = {
         "server": "online",
         "bot_initialized": bot_app is not None,
+        "bot_started": bot_started,
         "webhook_url": WEBHOOK_URL,
         "domain": DOMAIN
     }

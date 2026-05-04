@@ -9,9 +9,10 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
+from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
-from telegram.error import BadRequest
+from telegram.error import BadRequest, InvalidToken
 from telegram.ext import (
     TypeHandler,
     Application,
@@ -31,6 +32,9 @@ from shared_data import (
     PRODUCTS,
     on_data_change_callbacks,
 )
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / '.env')
 
 def STORE_NAME(): return shared_data.CONFIG.get('STORE_NAME', 'Store')
 def WA_NUMBER(): return shared_data.CONFIG.get('WA_NUMBER', '6285126019233')
@@ -63,7 +67,6 @@ logger = logging.getLogger(__name__)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 
-BASE_DIR = Path(__file__).resolve().parent
 LOGO_DIR = BASE_DIR / 'assets' / 'logos'
 CATEGORY_LOGOS = {
     'canva': LOGO_DIR / 'canva.jpg',
@@ -1656,6 +1659,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await reply_html(message, fallback_text(), main_menu_keyboard(), with_typing_feedback=True)
         return
 
+    if await handle_admin_pending_text(message, context):
+        return
+
     if wants_main_menu_reset(message.text):
         await send_main_menu(message, context)
         return
@@ -1730,6 +1736,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     data = query.data or ''
     if is_duplicate_callback(context, chat_id, data, message.message_id if message else None, user_id):
         await query.answer()
+        return
+
+    if await handle_admin_callback(update, context):
         return
 
     if data == 'menu':
@@ -1832,6 +1841,10 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler('menu', menu_command))
     app.add_handler(CommandHandler('help', help_command))
     app.add_handler(CommandHandler('produk', produk_command))
+    app.add_handler(CommandHandler('admin', admin_command))
+    app.add_handler(CommandHandler('myid', myid_command))
+    app.add_handler(CommandHandler('cancel', admin_cancel_command))
+    app.add_handler(CommandHandler('batal', admin_cancel_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
@@ -1839,6 +1852,11 @@ def register_handlers(app: Application) -> None:
 
 
 def build_application() -> Application:
+    if not BOT_TOKEN:
+        raise InvalidToken(
+            'BOT_TOKEN belum diisi. Isi file .env atau environment variable BOT_TOKEN dengan token dari BotFather.'
+        )
+
     return (
         ApplicationBuilder()
         .token(BOT_TOKEN)
