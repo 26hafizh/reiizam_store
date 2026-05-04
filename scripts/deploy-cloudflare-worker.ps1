@@ -29,8 +29,27 @@ function Get-DotEnvValue {
 
 function New-WebhookSecret {
     $bytes = New-Object byte[] 32
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($bytes)
+    } finally {
+        $rng.Dispose()
+    }
     return [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+}
+
+function Invoke-NpxCapture {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Arguments
+    )
+
+    $output = & cmd /d /c "npx $Arguments 2>&1"
+    $exitCode = $LASTEXITCODE
+    return @{
+        ExitCode = $exitCode
+        Output = @($output)
+    }
 }
 
 $BotToken = Get-DotEnvValue "BOT_TOKEN"
@@ -47,8 +66,8 @@ if (-not $WebhookSecret) {
 
 Push-Location $WorkerDir
 try {
-    $WhoAmI = & npx wrangler whoami 2>&1
-    if ($LASTEXITCODE -ne 0 -or ($WhoAmI -join "`n") -match "not authenticated") {
+    $WhoAmI = Invoke-NpxCapture "wrangler whoami"
+    if ($WhoAmI.ExitCode -ne 0 -or ($WhoAmI.Output -join "`n") -match "not authenticated") {
         Write-Host "Wrangler belum login. Browser Cloudflare akan dibuka untuk login."
         & npx wrangler login
         if ($LASTEXITCODE -ne 0) {
@@ -56,14 +75,14 @@ try {
         }
     }
 
-    $DeployOutput = & npx wrangler deploy 2>&1
-    $DeployOutput | ForEach-Object { Write-Host $_ }
-    if ($LASTEXITCODE -ne 0) {
+    $DeployResult = Invoke-NpxCapture "wrangler deploy"
+    $DeployResult.Output | ForEach-Object { Write-Host $_ }
+    if ($DeployResult.ExitCode -ne 0) {
         throw "Deploy Cloudflare Worker gagal."
     }
 
     if (-not $WorkerUrl) {
-        $DeployText = $DeployOutput -join "`n"
+        $DeployText = $DeployResult.Output -join "`n"
         $match = [regex]::Match($DeployText, "https://[^\s]+\.workers\.dev")
         if ($match.Success) {
             $WorkerUrl = $match.Value
@@ -77,8 +96,9 @@ try {
     } | ConvertTo-Json -Compress | Set-Content -Encoding utf8 -Path $TempSecrets
 
     try {
-        & npx wrangler secret bulk $TempSecrets
-        if ($LASTEXITCODE -ne 0) {
+        $SecretResult = Invoke-NpxCapture "wrangler secret bulk `"$TempSecrets`""
+        $SecretResult.Output | ForEach-Object { Write-Host $_ }
+        if ($SecretResult.ExitCode -ne 0) {
             throw "Upload secret ke Cloudflare gagal."
         }
     } finally {
