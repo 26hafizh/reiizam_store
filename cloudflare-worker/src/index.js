@@ -31,7 +31,7 @@ const EXTRA_CATEGORY_ALIASES = {
 const { itemLookup, itemAliases, categoryAliases } = buildLookups(products);
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const webhookPath = env.WEBHOOK_PATH || "/telegram/webhook";
 
@@ -74,7 +74,12 @@ export default {
 
     try {
       const update = await request.json();
-      await handleUpdate(update, env);
+      const updateTask = handleUpdateSafely(update, env);
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(updateTask);
+      } else {
+        await updateTask;
+      }
       return jsonResponse({ ok: true });
     } catch (error) {
       console.error("Failed to process Telegram update", error);
@@ -83,9 +88,20 @@ export default {
   },
 };
 
+async function handleUpdateSafely(update, env) {
+  try {
+    await handleUpdate(update, env);
+  } catch (error) {
+    console.error("Failed to handle Telegram update", {
+      update_id: update?.update_id,
+      error: String(error?.stack || error),
+    });
+  }
+}
+
 async function handleUpdate(update, env) {
   if (update.callback_query) {
-    console.log("Incoming callback", {
+    debugLog(env, "Incoming callback", {
       id: update.update_id,
       chat_id: update.callback_query.message?.chat?.id,
       data: update.callback_query.data,
@@ -95,7 +111,7 @@ async function handleUpdate(update, env) {
   }
 
   if (update.message) {
-    console.log("Incoming message", {
+    debugLog(env, "Incoming message", {
       id: update.update_id,
       chat_id: update.message.chat?.id,
       text: update.message.text || "",
@@ -154,24 +170,23 @@ async function handleCallback(query, env) {
   const chatId = query.message?.chat?.id;
   const messageId = query.message?.message_id;
 
-  await answerCallbackQuery(env, query.id);
-
   if (!chatId) {
+    await answerCallbackQuery(env, query.id, "Chat tidak ditemukan.", true);
     return;
   }
 
   if (data === "menu") {
-    await replaceMessage(env, chatId, messageId, welcomeText(env), mainMenuKeyboard());
+    await answerAndReplace(env, query, chatId, messageId, welcomeText(env), mainMenuKeyboard());
     return;
   }
 
   if (data === "lihat_kategori") {
-    await replaceMessage(env, chatId, messageId, catalogIntroText(), categoryMenuKeyboard());
+    await answerAndReplace(env, query, chatId, messageId, catalogIntroText(), categoryMenuKeyboard());
     return;
   }
 
   if (data === "bantuan") {
-    await replaceMessage(env, chatId, messageId, helpText(), mainMenuKeyboard());
+    await answerAndReplace(env, query, chatId, messageId, helpText(), mainMenuKeyboard());
     return;
   }
 
@@ -181,7 +196,7 @@ async function handleCallback(query, env) {
       await answerCallbackQuery(env, query.id, "Kategori tidak ditemukan.", true);
       return;
     }
-    await replaceMessage(env, chatId, messageId, formatCategoryText(categoryKey), itemMenuKeyboard(categoryKey));
+    await answerAndReplace(env, query, chatId, messageId, formatCategoryText(categoryKey), itemMenuKeyboard(categoryKey));
     return;
   }
 
@@ -191,7 +206,7 @@ async function handleCallback(query, env) {
       await answerCallbackQuery(env, query.id, "Paket tidak ditemukan.", true);
       return;
     }
-    await replaceMessage(env, chatId, messageId, formatItemText(itemId), orderKeyboard(itemId, env));
+    await answerAndReplace(env, query, chatId, messageId, formatItemText(itemId), orderKeyboard(itemId, env));
     return;
   }
 
@@ -546,8 +561,24 @@ async function replaceMessage(env, chatId, messageId, text, replyMarkup) {
     if (result.ok) {
       return result;
     }
+    if (isMessageNotModified(result)) {
+      return { ok: true, result: "message_not_modified" };
+    }
   }
   return sendMessage(env, chatId, text, replyMarkup);
+}
+
+async function answerAndReplace(env, query, chatId, messageId, text, replyMarkup) {
+  const results = await Promise.allSettled([
+    answerCallbackQuery(env, query.id),
+    replaceMessage(env, chatId, messageId, text, replyMarkup),
+  ]);
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("Callback action failed", String(result.reason?.stack || result.reason));
+    }
+  }
 }
 
 async function sendMessage(env, chatId, text, replyMarkup) {
@@ -582,6 +613,16 @@ async function telegram(env, method, payload) {
     console.error(`Telegram ${method} failed`, body);
   }
   return body;
+}
+
+function isMessageNotModified(result) {
+  return String(result?.description || "").toLowerCase().includes("message is not modified");
+}
+
+function debugLog(env, message, data) {
+  if (env.DEBUG_LOGS === "1") {
+    console.log(message, data);
+  }
 }
 
 function jsonResponse(value, status = 200) {
