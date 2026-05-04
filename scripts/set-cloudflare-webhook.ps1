@@ -35,26 +35,23 @@ if (-not $BotToken) {
     throw "BOT_TOKEN tidak ditemukan di .env. Isi token bot dulu."
 }
 
-if (-not $SecretToken) {
-    $SecretToken = Get-DotEnvValue "WEBHOOK_SECRET"
-}
-
-if (-not $SecretToken) {
-    throw "SecretToken belum diisi. Pakai parameter -SecretToken yang sama dengan WEBHOOK_SECRET di Cloudflare."
-}
-
 $CleanWorkerUrl = $WorkerUrl.TrimEnd("/")
 $WebhookUrl = "$CleanWorkerUrl$WebhookPath"
 
-$Payload = @{
+$Payload = [ordered]@{
     url = $WebhookUrl
-    secret_token = $SecretToken
     drop_pending_updates = $true
     allowed_updates = @("message", "callback_query")
-} | ConvertTo-Json -Depth 5
+}
+
+if ($SecretToken) {
+    $Payload.secret_token = $SecretToken
+}
+
+$PayloadJson = $Payload | ConvertTo-Json -Depth 5
 
 $SetWebhookUrl = "https://api.telegram.org/bot$BotToken/setWebhook"
-$Result = Invoke-RestMethod -Method Post -Uri $SetWebhookUrl -ContentType "application/json" -Body $Payload
+$Result = Invoke-RestMethod -Method Post -Uri $SetWebhookUrl -ContentType "application/json" -Body $PayloadJson
 
 if (-not $Result.ok) {
     throw "Telegram setWebhook gagal: $($Result | ConvertTo-Json -Depth 5)"

@@ -120,4 +120,4 @@ if (-not $WorkerUrl) {
     throw "Worker URL tidak berhasil dibaca dari output deploy. Jalankan ulang dengan -WorkerUrl https://nama-worker.subdomain.workers.dev"
 }
 
-& (Join-Path $PSScriptRoot "set-cloudflare-webhook.ps1") -WorkerUrl $WorkerUrl -SecretToken $WebhookSecret
+& (Join-Path $PSScriptRoot "set-cloudflare-webhook.ps1") -WorkerUrl $WorkerUrl

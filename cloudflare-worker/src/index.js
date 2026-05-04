@@ -68,13 +68,6 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    if (env.WEBHOOK_SECRET) {
-      const header = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
-      if (header !== env.WEBHOOK_SECRET) {
-        return jsonResponse({ ok: false, error: "forbidden" }, 403);
-      }
-    }
-
     if (!env.BOT_TOKEN) {
       return jsonResponse({ ok: false, error: "BOT_TOKEN secret is missing" }, 500);
     }
