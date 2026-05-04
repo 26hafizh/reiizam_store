@@ -1,0 +1,9 @@
+name = "reiizam-store-bot"
+main = "src/index.js"
+compatibility_date = "2026-05-04"
+workers_dev = true
+
+[vars]
+STORE_NAME = "reiizam store"
+WA_NUMBER = "6285126019233"
+WEBHOOK_PATH = "/telegram/webhook"

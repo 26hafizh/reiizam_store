@@ -8,8 +8,15 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+logs/
 .local_bot*.log
 .local_bot.pid
+
+node_modules/
+.wrangler/
+cloudflare-worker/.dev.vars
+cloudflare-worker/.wrangler/
+cloudflare-worker/dist/
 
 .pytest_cache/
 .mypy_cache/

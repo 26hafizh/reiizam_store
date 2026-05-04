@@ -57,6 +57,22 @@ Bot Telegram katalog produk premium yang mengarahkan pembeli ke WhatsApp admin d
    ```
 5. Setelah deploy berhasil, bot akan berjalan terus selama servicenya aktif.
 
+## Deploy gratis di Cloudflare Workers
+Cloudflare Workers adalah opsi gratis yang lebih aman untuk bot ini karena memakai webhook dan tidak perlu server polling 24/7.
+
+1. Buat/login akun Cloudflare.
+2. Jalankan dari root repo:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudflare-worker.ps1
+   ```
+3. Ikuti login Cloudflare yang dibuka oleh Wrangler.
+4. Setelah deploy dan webhook aktif, hentikan bot lokal:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\stop-local-bot.ps1
+   ```
+
+Kode Worker ada di `cloudflare-worker/`. Endpoint health setelah deploy: `/health`.
+
 ## Admin Telegram
 - Ketik `/myid` ke bot untuk melihat Telegram ID kamu.
 - Set `ADMIN_TELEGRAM_ID` di environment atau `data/config.json`, lalu restart bot.
