@@ -44,6 +44,26 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/debug/getme") {
+      if (!isAuthorizedDebugRequest(request, env)) {
+        return jsonResponse({ ok: false, error: "forbidden" }, 403);
+      }
+      if (!env.BOT_TOKEN) {
+        return jsonResponse({ ok: false, error: "BOT_TOKEN secret is missing" }, 500);
+      }
+      const me = await telegram(env, "getMe", {});
+      return jsonResponse({
+        ok: me.ok,
+        bot: me.ok
+          ? {
+              id: me.result.id,
+              username: me.result.username,
+              first_name: me.result.first_name,
+            }
+          : me,
+      });
+    }
+
     if (request.method !== "POST" || url.pathname !== webhookPath) {
       return new Response("Not found", { status: 404 });
     }
@@ -72,11 +92,21 @@ export default {
 
 async function handleUpdate(update, env) {
   if (update.callback_query) {
+    console.log("Incoming callback", {
+      id: update.update_id,
+      chat_id: update.callback_query.message?.chat?.id,
+      data: update.callback_query.data,
+    });
     await handleCallback(update.callback_query, env);
     return;
   }
 
   if (update.message) {
+    console.log("Incoming message", {
+      id: update.update_id,
+      chat_id: update.message.chat?.id,
+      text: update.message.text || "",
+    });
     await handleMessage(update.message, env);
   }
 }
@@ -562,6 +592,13 @@ function jsonResponse(value, status = 200) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
+}
+
+function isAuthorizedDebugRequest(request, env) {
+  if (!env.WEBHOOK_SECRET) {
+    return false;
+  }
+  return (request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "") === env.WEBHOOK_SECRET;
 }
 
 function escapeHtml(value) {
